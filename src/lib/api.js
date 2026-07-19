@@ -24,7 +24,18 @@ export function setRefreshToken(token) {
   }
 }
 
+let refreshInFlight = null;
+
 export async function refreshSession() {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = doRefresh().finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefresh() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 

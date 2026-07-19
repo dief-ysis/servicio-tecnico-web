@@ -109,4 +109,18 @@ describe('refreshSession', () => {
 
     expect(result).toBe(false);
   });
+
+  test('llamadas concurrentes comparten un único request de refresh', async () => {
+    setRefreshToken('ref-existente');
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse(200, { accessToken: 'token-nuevo', refreshToken: 'refresh-nuevo' })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const [first, second] = await Promise.all([refreshSession(), refreshSession()]);
+
+    expect(first).toBe(true);
+    expect(second).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

@@ -11,7 +11,7 @@ const MENU = [
 ];
 
 export function Sidebar() {
-  const { usuario } = useAuth();
+  const { usuario, logout } = useAuth();
   const items = MENU.filter((item) => item.roles.includes(usuario.rol));
 
   return (
@@ -31,6 +31,14 @@ export function Sidebar() {
           {item.label.slice(0, 2)}
         </NavLink>
       ))}
+      <button
+        type="button"
+        title="Cerrar sesión"
+        onClick={logout}
+        className="mt-auto w-8 h-8 rounded-md flex items-center justify-center text-[10px] font-bold uppercase bg-ink-800 text-ink-500 hover:text-gold"
+      >
+        SA
+      </button>
     </nav>
   );
 }
