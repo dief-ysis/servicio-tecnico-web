@@ -1,10 +1,17 @@
-import { describe, test, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, test, expect, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import App from './App';
+import { setAccessToken, setRefreshToken } from './lib/api';
 
 describe('App', () => {
-  test('renders without crashing', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setAccessToken(null);
+    setRefreshToken(null);
+  });
+
+  test('sin sesión, la ruta raíz termina mostrando el login', async () => {
     render(<App />);
-    expect(screen.getByText('Servicio Técnico')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Servicio Técnico')).toBeInTheDocument());
   });
 });
