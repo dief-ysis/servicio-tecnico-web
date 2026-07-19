@@ -56,7 +56,7 @@ export function ClientsPage() {
 
       {isLoading ? (
         <p className="text-ink-500 text-sm">Cargando...</p>
-      ) : (
+      ) : data ? (
         <>
           <ClientsTable clientes={data.data} canEdit={canWrite} onEdit={(cliente) => setModalCliente(cliente)} />
           <div className="flex items-center gap-3 text-sm text-ink-500">
@@ -81,7 +81,7 @@ export function ClientsPage() {
             </button>
           </div>
         </>
-      )}
+      ) : null}
 
       {modalCliente !== undefined && (
         <ClientFormModal cliente={modalCliente} onClose={() => setModalCliente(undefined)} />

@@ -18,8 +18,15 @@ vi.mock('../components/clients/ClientFormModal', () => ({
   ),
 }));
 
-function renderPage() {
-  const queryClient = new QueryClient();
+function renderPage(queryClientOptions = {}) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        ...queryClientOptions,
+      },
+    },
+  });
   return render(
     <QueryClientProvider client={queryClient}>
       <ClientsPage />
@@ -84,5 +91,16 @@ describe('ClientsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /nuevo cliente/i }));
 
     expect(screen.getByTestId('client-form-modal')).toHaveTextContent('nuevo');
+  });
+
+  test('muestra ErrorBanner cuando getClients falla sin crash del componente', async () => {
+    getClients.mockRejectedValue(new Error('fallo_red'));
+
+    renderPage();
+
+    // Wait for the error banner to appear after loading finishes
+    await waitFor(() => {
+      expect(screen.getByText('No se pudo cargar la lista de clientes.')).toBeInTheDocument();
+    });
   });
 });
