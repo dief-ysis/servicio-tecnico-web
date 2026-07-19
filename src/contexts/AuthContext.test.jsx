@@ -118,7 +118,9 @@ describe('AuthProvider', () => {
 
   test('con refresh token guardado, si la red falla al restaurar la sesión termina en unauthenticated (no se queda en loading)', async () => {
     setRefreshToken('ref-existente');
-    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(200, { accessToken: 'tok-nuevo', refreshToken: 'ref-nuevo' }))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
     vi.stubGlobal('fetch', fetchMock);
 
     render(<AuthProvider><Probe /></AuthProvider>);
