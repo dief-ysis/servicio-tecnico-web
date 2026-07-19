@@ -91,20 +91,20 @@ describe('ClientFormModal', () => {
 
   test('error del backend se muestra sin cerrar el modal', async () => {
     const onClose = vi.fn();
-    createClient.mockRejectedValue(new Error('nombre_o_empresa_requerido'));
+    // Mock createClient para rechazar con un error no mapeado en SERVER_ERROR_MESSAGES
+    createClient.mockRejectedValue(new Error('algo_no_mapeado'));
     renderModal({ cliente: null, onClose });
 
+    // Llenar con datos VÁLIDOS para que pase la validación del cliente
+    // y createClient sea efectivamente llamado
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Ana Soto');
     await userEvent.type(screen.getByLabelText('Teléfono'), '+56911111111');
-    await userEvent.type(screen.getByLabelText('Empresa'), 'Luces SpA');
-    // Vaciar Empresa después de escribir para simular que el usuario la borró antes de enviar
-    await userEvent.clear(screen.getByLabelText('Empresa'));
-    await userEvent.type(screen.getByLabelText('Empresa'), 'x');
-    await userEvent.clear(screen.getByLabelText('Empresa'));
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
-    // La validación de cliente ya bloquea este caso (sin nombre/empresa) — se prueba
-    // aquí que si el backend igual devuelve el error, el mensaje se muestra desde el mapeo de errores.
-    expect(await screen.findByText('Debes indicar nombre o empresa.')).toBeInTheDocument();
+    // El error del backend debe mostrarse con el fallback message
+    // (dado que 'algo_no_mapeado' no está en SERVER_ERROR_MESSAGES)
+    expect(await screen.findByText('No se pudo guardar el cliente.')).toBeInTheDocument();
+    // El modal NO debe cerrarse en caso de error
     expect(onClose).not.toHaveBeenCalled();
   });
 });
