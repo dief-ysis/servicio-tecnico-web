@@ -19,6 +19,9 @@ export default [
     rules: {
       ...reactPlugin.configs.flat.recommended.rules,
       'react/react-in-jsx-scope': 'off',
+      // Proyecto sin TypeScript ni el paquete `prop-types`; no se usa
+      // validación de props en runtime en ningún componente.
+      'react/prop-types': 'off',
     },
   },
   reactHooksPlugin.configs.flat['recommended'],
