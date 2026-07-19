@@ -28,17 +28,21 @@ export async function refreshSession() {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 
-  const res = await fetch(`${API_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-  });
-  if (!res.ok) return false;
+  try {
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return false;
 
-  const data = await res.json();
-  setAccessToken(data.accessToken);
-  setRefreshToken(data.refreshToken);
-  return true;
+    const data = await res.json();
+    setAccessToken(data.accessToken);
+    setRefreshToken(data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function buildRequestInit(options) {

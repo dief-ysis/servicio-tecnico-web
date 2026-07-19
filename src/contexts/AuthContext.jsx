@@ -33,19 +33,23 @@ export function AuthProvider({ children }) {
         setStatus('unauthenticated');
         return;
       }
-      const refreshed = await refreshSession();
-      if (!refreshed) {
+      try {
+        const refreshed = await refreshSession();
+        if (!refreshed) {
+          clearSession();
+          return;
+        }
+        const res = await apiFetch('/auth/me');
+        if (!res.ok) {
+          clearSession();
+          return;
+        }
+        const data = await res.json();
+        setUsuario(data);
+        setStatus('authenticated');
+      } catch {
         clearSession();
-        return;
       }
-      const res = await apiFetch('/auth/me');
-      if (!res.ok) {
-        clearSession();
-        return;
-      }
-      const data = await res.json();
-      setUsuario(data);
-      setStatus('authenticated');
     }
     restoreSession();
     // Solo al montar: la restauración de sesión ocurre una vez por carga de página.
@@ -70,8 +74,14 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await apiFetch('/auth/logout', { method: 'POST' });
-    clearSession();
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch {
+      // Falla de red durante logout: igual limpiamos la sesión localmente,
+      // "cerrar sesión" debe funcionar como acción local sin depender de conectividad.
+    } finally {
+      clearSession();
+    }
   }
 
   async function refreshUsuario() {

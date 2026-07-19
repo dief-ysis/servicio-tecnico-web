@@ -99,4 +99,14 @@ describe('refreshSession', () => {
     expect(result).toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  test('si el fetch de red falla, devuelve false en vez de lanzar', async () => {
+    setRefreshToken('ref-existente');
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await refreshSession();
+
+    expect(result).toBe(false);
+  });
 });

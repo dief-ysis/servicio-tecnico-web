@@ -115,4 +115,38 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
     expect(screen.getByTestId('usuario').textContent).toBe('ninguno');
   });
+
+  test('con refresh token guardado, si la red falla al restaurar la sesión termina en unauthenticated (no se queda en loading)', async () => {
+    setRefreshToken('ref-existente');
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AuthProvider><Probe /></AuthProvider>);
+
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
+  });
+
+  test('logout limpia la sesión localmente aunque la llamada a la API falle', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          accessToken: 'tok',
+          refreshToken: 'ref',
+          usuario: { id: 1, nombre: 'Ana', rol: 'RECEPCION' },
+          mustChangePassword: false,
+        })
+      )
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
+    await userEvent.click(screen.getByText('login'));
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authenticated'));
+
+    await userEvent.click(screen.getByText('logout'));
+
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
+    expect(screen.getByTestId('usuario').textContent).toBe('ninguno');
+  });
 });
