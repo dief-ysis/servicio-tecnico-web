@@ -9,9 +9,16 @@ vi.mock('../contexts/AuthContext', () => ({
   useAuth: vi.fn(),
 }));
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 describe('LoginPage', () => {
   beforeEach(() => {
     useAuth.mockReset();
+    mockNavigate.mockClear();
   });
 
   test('login exitoso sin mustChangePassword navega a /', async () => {
@@ -25,6 +32,7 @@ describe('LoginPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /ingresar/i }));
 
     await waitFor(() => expect(login).toHaveBeenCalledWith('ana', 'Password123!'));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/'));
   });
 
   test('login con mustChangePassword=true navega a /cambiar-password', async () => {
@@ -38,6 +46,7 @@ describe('LoginPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /ingresar/i }));
 
     await waitFor(() => expect(login).toHaveBeenCalled());
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/cambiar-password'));
   });
 
   test('credenciales inválidas muestra un mensaje de error sin romper el formulario', async () => {

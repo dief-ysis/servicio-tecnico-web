@@ -13,10 +13,17 @@ vi.mock('../lib/api', () => ({
   apiFetch: vi.fn(),
 }));
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 describe('ChangePasswordPage', () => {
   beforeEach(() => {
     useAuth.mockReset();
     apiFetch.mockReset();
+    mockNavigate.mockClear();
   });
 
   test('cambio exitoso refresca el usuario', async () => {
@@ -31,6 +38,7 @@ describe('ChangePasswordPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
     await waitFor(() => expect(refreshUsuario).toHaveBeenCalled());
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/'));
   });
 
   test('contraseña actual incorrecta muestra error', async () => {
