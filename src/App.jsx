@@ -7,6 +7,7 @@ import { LoginPage } from './routes/LoginPage';
 import { ChangePasswordPage } from './routes/ChangePasswordPage';
 import { HomePage } from './routes/HomePage';
 import { ComingSoonPage } from './routes/ComingSoonPage';
+import { ClientsPage } from './routes/ClientsPage';
 
 const queryClient = new QueryClient();
 
@@ -36,8 +37,8 @@ function App() {
               <Route
                 path="/clientes"
                 element={
-                  <ProtectedRoute roles={['RECEPCION', 'ADMIN']}>
-                    <ComingSoonPage title="Clientes" />
+                  <ProtectedRoute roles={['RECEPCION', 'TECNICO', 'ADMIN']}>
+                    <ClientsPage />
                   </ProtectedRoute>
                 }
               />

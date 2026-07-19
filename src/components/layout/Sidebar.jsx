@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const MENU = [
-  { to: '/clientes', label: 'Clientes', roles: ['RECEPCION', 'ADMIN'] },
+  { to: '/clientes', label: 'Clientes', roles: ['RECEPCION', 'TECNICO', 'ADMIN'] },
   { to: '/ordenes', label: 'Órdenes', roles: ['RECEPCION', 'TECNICO', 'ADMIN'] },
   { to: '/equipos', label: 'Equipos', roles: ['TECNICO', 'ADMIN'] },
   { to: '/repuestos', label: 'Repuestos', roles: ['RECEPCION', 'TECNICO', 'ADMIN'] },
