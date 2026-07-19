@@ -103,4 +103,45 @@ describe('ClientsPage', () => {
       expect(screen.getByText('No se pudo cargar la lista de clientes.')).toBeInTheDocument();
     });
   });
+
+  test('paginado: "Anterior" deshabilitado en la primera página, "Siguiente" navega a offset 20', async () => {
+    const page1 = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      nombre: `Cliente ${i}`,
+      empresa: null,
+      telefono: '+56900000000',
+      correo: null,
+      rut: null,
+    }));
+    const page2 = Array.from({ length: 20 }, (_, i) => ({
+      id: i + 20,
+      nombre: `Cliente ${i + 20}`,
+      empresa: null,
+      telefono: '+56900000000',
+      correo: null,
+      rut: null,
+    }));
+
+    getClients.mockResolvedValueOnce({ data: page1, total: 45, limit: 20, offset: 0 });
+    getClients.mockResolvedValueOnce({ data: page2, total: 45, limit: 20, offset: 20 });
+
+    renderPage();
+
+    await screen.findByText('Cliente 0');
+
+    const anteriorBtn = screen.getByRole('button', { name: /anterior/i });
+    const siguienteBtn = screen.getByRole('button', { name: /siguiente/i });
+
+    expect(anteriorBtn).toBeDisabled();
+    expect(siguienteBtn).not.toBeDisabled();
+
+    await userEvent.click(siguienteBtn);
+
+    await waitFor(() =>
+      expect(getClients).toHaveBeenLastCalledWith({ q: undefined, limit: 20, offset: 20 })
+    );
+
+    await screen.findByText('Cliente 20');
+    expect(screen.getByRole('button', { name: /anterior/i })).not.toBeDisabled();
+  });
 });
