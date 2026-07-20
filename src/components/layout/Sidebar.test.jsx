@@ -14,11 +14,11 @@ describe('Sidebar', () => {
     useAuth.mockReset();
   });
 
-  test('TECNICO no ve Clientes ni Usuarios', () => {
+  test('TECNICO ve Clientes (solo lectura) pero no Usuarios', () => {
     useAuth.mockReturnValue({ usuario: { rol: 'TECNICO' }, logout: vi.fn() });
     render(<MemoryRouter><Sidebar /></MemoryRouter>);
 
-    expect(screen.queryByTitle('Clientes')).not.toBeInTheDocument();
+    expect(screen.getByTitle('Clientes')).toBeInTheDocument();
     expect(screen.queryByTitle('Usuarios')).not.toBeInTheDocument();
     expect(screen.getByTitle('Equipos')).toBeInTheDocument();
   });
