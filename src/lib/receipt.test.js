@@ -4,8 +4,8 @@ import { openReceiptInNewTab } from './receipt';
 describe('openReceiptInNewTab', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
-    global.URL.revokeObjectURL = vi.fn();
+    window.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    window.URL.revokeObjectURL = vi.fn();
     window.open = vi.fn();
   });
 
