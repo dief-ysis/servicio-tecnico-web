@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { getOrders, getOrder, createOrder } from './orders';
+import { getOrders, getOrder, createOrder, getReceiptBlob } from './orders';
 import { apiFetch } from '../lib/api';
 
 vi.mock('../lib/api', () => ({
@@ -57,5 +57,30 @@ describe('orders api', () => {
     apiFetch.mockResolvedValue(jsonResponse(400, { error: 'equipos_requeridos' }));
 
     await expect(createOrder({ clienteId: 3, equipos: [] })).rejects.toThrow('equipos_requeridos');
+  });
+
+  function blobResponse(status, blob, errorBody = {}) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      blob: async () => blob,
+      json: async () => errorBody,
+    };
+  }
+
+  test('getReceiptBlob pide /ordenes/:id/comprobante y devuelve el blob', async () => {
+    const blob = new Blob(['pdf'], { type: 'application/pdf' });
+    apiFetch.mockResolvedValue(blobResponse(200, blob));
+
+    const result = await getReceiptBlob(7);
+
+    expect(apiFetch).toHaveBeenCalledWith('/ordenes/7/comprobante');
+    expect(result).toBe(blob);
+  });
+
+  test('getReceiptBlob lanza un Error si el backend responde con error', async () => {
+    apiFetch.mockResolvedValue(blobResponse(404, null, { error: 'orden_no_encontrada' }));
+
+    await expect(getReceiptBlob(999)).rejects.toThrow('orden_no_encontrada');
   });
 });

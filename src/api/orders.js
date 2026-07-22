@@ -27,3 +27,12 @@ export async function createOrder(payload) {
   });
   return parseOrThrow(res);
 }
+
+export async function getReceiptBlob(id) {
+  const res = await apiFetch(`/ordenes/${id}/comprobante`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || 'error_desconocido');
+  }
+  return res.blob();
+}
