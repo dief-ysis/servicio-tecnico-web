@@ -36,8 +36,13 @@ export function OrderFormModal({ onClose }) {
     mutationFn: (payload) => createOrder(payload),
     onSuccess: async (orden) => {
       queryClient.invalidateQueries({ queryKey: ['ordenes'] });
-      const blob = await getReceiptBlob(orden.id);
-      openReceiptInNewTab(blob);
+      try {
+        const blob = await getReceiptBlob(orden.id);
+        openReceiptInNewTab(blob);
+      } catch {
+        // La orden ya se creó; el comprobante se puede reimprimir después
+        // desde el detalle de la orden. No bloquear el cierre del modal.
+      }
       onClose();
     },
   });

@@ -108,6 +108,21 @@ describe('OrderFormModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
+  test('si falla la descarga del comprobante, la orden igual se considera creada y el modal se cierra', async () => {
+    const onClose = vi.fn();
+    createOrder.mockResolvedValue({ id: 42 });
+    getReceiptBlob.mockRejectedValue(new Error('fallo_red'));
+    renderModal({ onClose });
+
+    await userEvent.click(screen.getByRole('button', { name: /seleccionar-cliente-mock/i }));
+    await userEvent.type(screen.getByLabelText('Tipo / modelo'), 'Consola DMX');
+    await userEvent.type(screen.getByLabelText('Falla reportada'), 'No enciende');
+    await userEvent.click(screen.getByRole('button', { name: /^guardar$/i }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.queryByText('No se pudo crear la orden.')).not.toBeInTheDocument();
+  });
+
   test('error del backend se muestra sin cerrar el modal', async () => {
     const onClose = vi.fn();
     createOrder.mockRejectedValue(new Error('cliente_no_encontrado'));
