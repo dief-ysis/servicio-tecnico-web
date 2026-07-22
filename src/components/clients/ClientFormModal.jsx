@@ -10,7 +10,7 @@ const SERVER_ERROR_MESSAGES = {
   nombre_o_empresa_requerido: 'Debes indicar nombre o empresa.',
 };
 
-export function ClientFormModal({ cliente, onClose }) {
+export function ClientFormModal({ cliente, onClose, onSaved }) {
   const isEdit = Boolean(cliente);
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
@@ -24,8 +24,9 @@ export function ClientFormModal({ cliente, onClose }) {
 
   const mutation = useMutation({
     mutationFn: (payload) => (isEdit ? updateClient(cliente.id, payload) : createClient(payload)),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['clientes'] });
+      onSaved?.(data);
       onClose();
     },
   });
