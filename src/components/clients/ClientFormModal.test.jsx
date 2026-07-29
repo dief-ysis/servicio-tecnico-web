@@ -107,4 +107,17 @@ describe('ClientFormModal', () => {
     // El modal NO debe cerrarse en caso de error
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  test('alta: al guardar, llama a onSaved con el cliente creado', async () => {
+    const onSaved = vi.fn();
+    const creado = { id: 9, nombre: 'Ana Soto', empresa: null, telefono: '+56911111111', correo: null, rut: null };
+    createClient.mockResolvedValue(creado);
+    renderModal({ cliente: null, onSaved });
+
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Ana Soto');
+    await userEvent.type(screen.getByLabelText('Teléfono'), '+56911111111');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(creado));
+  });
 });

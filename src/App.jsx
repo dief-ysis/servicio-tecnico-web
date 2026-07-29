@@ -8,6 +8,8 @@ import { ChangePasswordPage } from './routes/ChangePasswordPage';
 import { HomePage } from './routes/HomePage';
 import { ComingSoonPage } from './routes/ComingSoonPage';
 import { ClientsPage } from './routes/ClientsPage';
+import { OrdersPage } from './routes/OrdersPage';
+import { OrderDetailPage } from './routes/OrderDetailPage';
 
 const queryClient = new QueryClient();
 
@@ -42,7 +44,22 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/ordenes" element={<ComingSoonPage title="Órdenes" />} />
+              <Route
+                path="/ordenes"
+                element={
+                  <ProtectedRoute roles={['RECEPCION', 'TECNICO', 'ADMIN']}>
+                    <OrdersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/ordenes/:id"
+                element={
+                  <ProtectedRoute roles={['RECEPCION', 'TECNICO', 'ADMIN']}>
+                    <OrderDetailPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/equipos"
                 element={
