@@ -4,6 +4,7 @@ import { createClient, updateClient } from '../../api/clients';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { ErrorBanner } from '../ui/ErrorBanner';
+import { Modal } from '../ui/Modal';
 
 const SERVER_ERROR_MESSAGES = {
   telefono_requerido: 'El teléfono es requerido.',
@@ -37,6 +38,7 @@ export function ClientFormModal({ cliente, onClose, onSaved }) {
 
   function handleSubmit(e) {
     e.preventDefault();
+    e.stopPropagation();
     setValidationError('');
 
     if (!form.telefono) {
@@ -62,7 +64,7 @@ export function ClientFormModal({ cliente, onClose, onSaved }) {
     : '';
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <Modal>
       <form
         onSubmit={handleSubmit}
         className="bg-ink-900 border border-ink-700 rounded-lg p-6 w-full max-w-sm flex flex-col gap-3"
@@ -83,6 +85,6 @@ export function ClientFormModal({ cliente, onClose, onSaved }) {
           </Button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
