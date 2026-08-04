@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Checkbox } from '../ui/Checkbox';
 import { ErrorBanner } from '../ui/ErrorBanner';
+import { Modal } from '../ui/Modal';
 import { ClientPicker } from './ClientPicker';
 
 const EMPTY_EQUIPO = {
@@ -96,7 +97,7 @@ export function OrderFormModal({ onClose }) {
     : '';
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 overflow-y-auto py-6">
+    <Modal>
       <form
         onSubmit={handleSubmit}
         className="bg-ink-900 border border-ink-700 rounded-lg p-6 w-full max-w-lg flex flex-col gap-3"
@@ -175,6 +176,6 @@ export function OrderFormModal({ onClose }) {
           </Button>
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }
