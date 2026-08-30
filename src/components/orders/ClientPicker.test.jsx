@@ -40,6 +40,15 @@ describe('ClientPicker', () => {
     expect(getClients).not.toHaveBeenCalled();
   });
 
+  test('id por defecto es "buscar-cliente-orden"; el prop id lo sobrescribe', async () => {
+    const { unmount } = renderPicker();
+    expect(screen.getByLabelText('Cliente')).toHaveAttribute('id', 'buscar-cliente-orden');
+    unmount();
+
+    renderPicker({ id: 'filtro-cliente-orden' });
+    expect(screen.getByLabelText('Cliente')).toHaveAttribute('id', 'filtro-cliente-orden');
+  });
+
   test('busca y al seleccionar un resultado llama a onChange con el cliente', async () => {
     getClients.mockResolvedValue({
       data: [{ id: 3, nombre: 'Ana Soto', empresa: null, telefono: '+56911111111' }],
