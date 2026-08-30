@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { OrdersTable } from '../components/orders/OrdersTable';
 import { OrderFormModal } from '../components/orders/OrderFormModal';
+import { ClientPicker } from '../components/orders/ClientPicker';
 
 const PAGE_SIZE = 20;
 
@@ -13,15 +14,22 @@ export function OrdersPage() {
   const { usuario } = useAuth();
   const canWrite = usuario.rol === 'RECEPCION' || usuario.rol === 'ADMIN';
 
+  const [clienteFiltro, setClienteFiltro] = useState(null);
   const [page, setPage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['ordenes', { page }],
-    queryFn: () => getOrders({ limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
+    queryKey: ['ordenes', { clienteId: clienteFiltro?.id, page }],
+    queryFn: () =>
+      getOrders({ clienteId: clienteFiltro?.id, limit: PAGE_SIZE, offset: page * PAGE_SIZE }),
   });
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+
+  function handleFiltroChange(cliente) {
+    setClienteFiltro(cliente);
+    setPage(0);
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -29,6 +37,8 @@ export function OrdersPage() {
         <h1 className="text-white text-lg font-bold">Órdenes</h1>
         {canWrite && <Button onClick={() => setModalOpen(true)}>Nueva orden</Button>}
       </div>
+
+      <ClientPicker id="filtro-cliente-orden" cliente={clienteFiltro} onChange={handleFiltroChange} />
 
       {isError && <ErrorBanner message="No se pudo cargar la lista de órdenes." />}
 
