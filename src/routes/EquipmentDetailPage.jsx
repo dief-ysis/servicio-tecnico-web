@@ -1,8 +1,17 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getEquipmentById, updateEquipmentState, assignTechnician, submitBudget } from '../api/equipment';
+import {
+  getEquipmentById,
+  updateEquipmentState,
+  assignTechnician,
+  submitBudget,
+  getPartUsage,
+  registerPartUsage,
+  reversePartUsage,
+} from '../api/equipment';
 import { getUsers } from '../api/users';
+import { getParts } from '../api/parts';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -21,6 +30,15 @@ const SERVER_ERROR_MESSAGES = {
   monto_invalido: 'El monto debe ser un número mayor a cero.',
   descripcion_requerida: 'La descripción es requerida.',
   equipo_no_encontrado: 'El equipo ya no existe.',
+  repuesto_no_encontrado: 'El repuesto seleccionado ya no existe.',
+  repuesto_inactivo: 'Ese repuesto está dado de baja.',
+  stock_insuficiente: 'No hay stock suficiente de ese repuesto.',
+  repuesto_id_invalido: 'Selecciona un repuesto válido.',
+  cantidad_invalida: 'La cantidad debe ser un número entero mayor a cero.',
+  movimiento_no_encontrado: 'Ese movimiento ya no existe.',
+  movimiento_no_coincide: 'Ese movimiento no pertenece a este equipo.',
+  movimiento_no_es_consumo: 'Solo se pueden revertir consumos de repuestos.',
+  ya_revertido: 'Ese consumo ya fue revertido.',
 };
 
 function serverMessage(error, fallback) {
@@ -39,6 +57,10 @@ export function EquipmentDetailPage() {
   const [motivo, setMotivo] = useState('');
   const [presupuestoMonto, setPresupuestoMonto] = useState('');
   const [presupuestoDescripcion, setPresupuestoDescripcion] = useState('');
+  const [repuestoId, setRepuestoId] = useState('');
+  const [cantidad, setCantidad] = useState('');
+  const [revirtiendoId, setRevirtiendoId] = useState(null);
+  const [motivoReversion, setMotivoReversion] = useState('');
   const [validationError, setValidationError] = useState('');
 
   const { data: equipo, isLoading, isError } = useQuery({
@@ -51,6 +73,16 @@ export function EquipmentDetailPage() {
     queryFn: getUsers,
   });
   const tecnicos = (usuarios || []).filter((u) => u.rol === 'TECNICO');
+
+  const { data: repuestos } = useQuery({
+    queryKey: ['repuestos'],
+    queryFn: getParts,
+  });
+
+  const { data: movimientos } = useQuery({
+    queryKey: ['equipos', id, 'repuestos'],
+    queryFn: () => getPartUsage(id),
+  });
 
   function invalidateEquipo() {
     queryClient.invalidateQueries({ queryKey: ['equipos', id] });
@@ -69,6 +101,29 @@ export function EquipmentDetailPage() {
   const tecnicoMutation = useMutation({
     mutationFn: (tecnicoId) => assignTechnician(id, { tecnicoId }),
     onSuccess: invalidateEquipo,
+  });
+
+  function invalidatePartUsage() {
+    queryClient.invalidateQueries({ queryKey: ['equipos', id, 'repuestos'] });
+    queryClient.invalidateQueries({ queryKey: ['repuestos'] });
+  }
+
+  const registrarRepuestoMutation = useMutation({
+    mutationFn: () => registerPartUsage(id, { repuestoId: Number(repuestoId), cantidad: Number(cantidad) }),
+    onSuccess: () => {
+      setRepuestoId('');
+      setCantidad('');
+      invalidatePartUsage();
+    },
+  });
+
+  const reversionMutation = useMutation({
+    mutationFn: (movimientoId) => reversePartUsage(id, movimientoId, { motivo: motivoReversion }),
+    onSuccess: () => {
+      setRevirtiendoId(null);
+      setMotivoReversion('');
+      invalidatePartUsage();
+    },
   });
 
   const presupuestoMutation = useMutation({
@@ -108,6 +163,29 @@ export function EquipmentDetailPage() {
       return;
     }
     presupuestoMutation.mutate();
+  }
+
+  function handleRegistrarRepuesto(e) {
+    e.preventDefault();
+    setValidationError('');
+    if (!repuestoId) {
+      setValidationError('Selecciona un repuesto.');
+      return;
+    }
+    if (!cantidad || !Number.isInteger(Number(cantidad)) || Number(cantidad) <= 0) {
+      setValidationError('La cantidad debe ser un número entero mayor a cero.');
+      return;
+    }
+    registrarRepuestoMutation.mutate();
+  }
+
+  function handleConfirmarReversion(movimientoId) {
+    setValidationError('');
+    if (!motivoReversion.trim()) {
+      setValidationError('Debes indicar un motivo para revertir el consumo.');
+      return;
+    }
+    reversionMutation.mutate(movimientoId);
   }
 
   if (isLoading) return <p className="text-ink-500 text-sm">Cargando...</p>;
@@ -241,6 +319,86 @@ export function EquipmentDetailPage() {
             />
           </form>
         )}
+      </div>
+
+      <div className="border border-ink-700 rounded-md p-3 flex flex-col gap-2">
+        <p className="text-ink-500 text-xs uppercase font-semibold">Repuestos usados</p>
+
+        <form onSubmit={handleRegistrarRepuesto} className="flex flex-col gap-2">
+          <Select id="repuesto" label="Repuesto" value={repuestoId} onChange={(e) => setRepuestoId(e.target.value)}>
+            <option value="">Selecciona un repuesto</option>
+            {(repuestos || []).map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.nombre} (stock: {r.stockActual})
+              </option>
+            ))}
+          </Select>
+          <Input
+            id="cantidad"
+            label="Cantidad"
+            type="number"
+            min="1"
+            value={cantidad}
+            onChange={(e) => setCantidad(e.target.value)}
+          />
+          <Button type="submit" variant="secondary" disabled={registrarRepuestoMutation.isPending}>
+            {registrarRepuestoMutation.isPending ? 'Guardando...' : 'Registrar'}
+          </Button>
+          <ErrorBanner
+            message={
+              registrarRepuestoMutation.isError
+                ? serverMessage(registrarRepuestoMutation.error, 'No se pudo registrar el repuesto.')
+                : ''
+            }
+          />
+        </form>
+
+        {(movimientos || []).length === 0 ? (
+          <p className="text-ink-500 text-sm">Sin repuestos registrados.</p>
+        ) : (
+          <ul className="flex flex-col gap-2 text-sm">
+            {movimientos.map((m) => (
+              <li key={m.id} className="border-t border-ink-700 pt-2 flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-white">
+                    {m.repuestoNombre} × {m.cantidad}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRevirtiendoId(revirtiendoId === m.id ? null : m.id)}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Revertir
+                  </button>
+                </div>
+                <p className="text-ink-500 text-xs">
+                  {formatFecha(m.fecha)} · {m.usuarioNombre}
+                </p>
+                {revirtiendoId === m.id && (
+                  <div className="flex flex-col gap-2">
+                    <Textarea
+                      id={`motivo-reversion-${m.id}`}
+                      label="Motivo de la reversión"
+                      value={motivoReversion}
+                      onChange={(e) => setMotivoReversion(e.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => handleConfirmarReversion(m.id)}
+                      disabled={reversionMutation.isPending}
+                    >
+                      {reversionMutation.isPending ? 'Guardando...' : 'Confirmar reversión'}
+                    </Button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <ErrorBanner
+          message={reversionMutation.isError ? serverMessage(reversionMutation.error, 'No se pudo revertir el consumo.') : ''}
+        />
       </div>
 
       <div className="flex flex-col gap-2">
