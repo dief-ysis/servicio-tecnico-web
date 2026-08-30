@@ -15,11 +15,11 @@ export function EquipmentsPage() {
   const [tecnico, setTecnico] = useState('');
   const buscar = useDebouncedValue(buscarInput, 300);
 
-  const { data: usuarios } = useQuery({
+  const { data: usuarios, isError: isErrorUsuarios } = useQuery({
     queryKey: ['usuarios'],
     queryFn: getUsers,
   });
-  const tecnicos = (usuarios || []).filter((u) => u.rol === 'TECNICO');
+  const tecnicos = (usuarios || []).filter((u) => u.rol === 'TECNICO' && u.activo);
 
   const { data: equipos, isLoading, isError } = useQuery({
     queryKey: ['equipos', { buscar, estado, tecnico }],
@@ -57,6 +57,7 @@ export function EquipmentsPage() {
       </div>
 
       {isError && <ErrorBanner message="No se pudo cargar la lista de equipos." />}
+      {isErrorUsuarios && <ErrorBanner message="No se pudo cargar la lista de técnicos para el filtro." />}
 
       {isLoading ? (
         <p className="text-ink-500 text-sm">Cargando...</p>

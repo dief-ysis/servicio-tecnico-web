@@ -32,7 +32,10 @@ vi.mock('../api/parts', () => ({
   getParts: vi.fn(),
 }));
 
-const USUARIOS = [{ id: 1, nombre: 'Juan Pérez', rol: 'TECNICO' }];
+const USUARIOS = [
+  { id: 1, nombre: 'Juan Pérez', rol: 'TECNICO', activo: true },
+  { id: 2, nombre: 'Pedro Soto', rol: 'TECNICO', activo: false },
+];
 const REPUESTOS = [{ id: 3, nombre: 'Fusible 5A', stockActual: 10 }];
 const MOVIMIENTOS = [
   { id: 1, repuestoId: 3, repuestoNombre: 'Fusible 5A', cantidad: 2, fecha: '2026-07-22T10:00:00.000Z', usuarioId: 1, usuarioNombre: 'Juan Pérez' },
@@ -172,6 +175,27 @@ describe('EquipmentDetailPage', () => {
     await userEvent.selectOptions(screen.getByLabelText('Técnico'), 'Juan Pérez');
 
     await waitFor(() => expect(assignTechnician).toHaveBeenCalledWith('5', { tecnicoId: 1 }));
+  });
+
+  test('el selector de técnico no incluye técnicos inactivos', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    expect(screen.getByRole('option', { name: 'Juan Pérez' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Pedro Soto' })).not.toBeInTheDocument();
+  });
+
+  test('muestra ErrorBanner cuando getUsers falla al cargar la lista de técnicos', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+    getUsers.mockRejectedValue(new Error('sin_permiso'));
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('No se pudo cargar la lista de técnicos.')).toBeInTheDocument();
+    });
   });
 
   test('el formulario de presupuesto solo se muestra en EN_DIAGNOSTICO', async () => {

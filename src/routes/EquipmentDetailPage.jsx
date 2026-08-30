@@ -68,11 +68,11 @@ export function EquipmentDetailPage() {
     queryFn: () => getEquipmentById(id),
   });
 
-  const { data: usuarios } = useQuery({
+  const { data: usuarios, isError: isErrorUsuarios } = useQuery({
     queryKey: ['usuarios'],
     queryFn: getUsers,
   });
-  const tecnicos = (usuarios || []).filter((u) => u.rol === 'TECNICO');
+  const tecnicos = (usuarios || []).filter((u) => u.rol === 'TECNICO' && u.activo);
 
   const { data: repuestos } = useQuery({
     queryKey: ['repuestos'],
@@ -240,6 +240,7 @@ export function EquipmentDetailPage() {
         <ErrorBanner
           message={tecnicoMutation.isError ? serverMessage(tecnicoMutation.error, 'No se pudo asignar el técnico.') : ''}
         />
+        <ErrorBanner message={isErrorUsuarios ? 'No se pudo cargar la lista de técnicos.' : ''} />
       </div>
 
       <div className="border border-ink-700 rounded-md p-3 flex flex-col gap-2">

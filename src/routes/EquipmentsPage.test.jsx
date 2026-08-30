@@ -28,8 +28,9 @@ const EQUIPOS = [
 ];
 
 const USUARIOS = [
-  { id: 1, nombre: 'Juan Pérez', rol: 'TECNICO' },
-  { id: 2, nombre: 'Carla Ríos', rol: 'RECEPCION' },
+  { id: 1, nombre: 'Juan Pérez', rol: 'TECNICO', activo: true },
+  { id: 2, nombre: 'Carla Ríos', rol: 'RECEPCION', activo: true },
+  { id: 3, nombre: 'Pedro Soto', rol: 'TECNICO', activo: false },
 ];
 
 function renderPage() {
@@ -66,6 +67,19 @@ describe('EquipmentsPage', () => {
 
     expect(screen.getByRole('option', { name: 'Juan Pérez' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Carla Ríos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Pedro Soto' })).not.toBeInTheDocument();
+  });
+
+  test('muestra ErrorBanner cuando getUsers falla, sin romper el filtro de estado', async () => {
+    getEquipment.mockResolvedValue(EQUIPOS);
+    getUsers.mockRejectedValue(new Error('sin_permiso'));
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('No se pudo cargar la lista de técnicos para el filtro.')).toBeInTheDocument();
+    });
+    expect(await screen.findByText('Ana Soto')).toBeInTheDocument();
   });
 
   test('escribir en el buscador termina consultando getEquipment con el término (debounced)', async () => {
