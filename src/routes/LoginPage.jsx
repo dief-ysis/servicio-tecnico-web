@@ -12,7 +12,7 @@ const ERROR_MESSAGES = {
 };
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, sessionExpired } = useAuth();
   const navigate = useNavigate();
   const [identificador, setIdentificador] = useState('');
   const [contrasena, setContrasena] = useState('');
@@ -59,7 +59,7 @@ export function LoginPage() {
             autoComplete="current-password"
             required
           />
-          <ErrorBanner message={error} />
+          <ErrorBanner message={error || (sessionExpired ? 'Tu sesión expiró, ingresa de nuevo.' : '')} />
           <Button type="submit" disabled={loading}>
             {loading ? 'Ingresando...' : 'Ingresar'}
           </Button>

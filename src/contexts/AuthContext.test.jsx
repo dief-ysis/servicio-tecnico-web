@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuthProvider, useAuth } from './AuthContext';
-import { setAccessToken, setRefreshToken } from '../lib/api';
+import { apiFetch, setAccessToken, setRefreshToken } from '../lib/api';
 
 function jsonResponse(status, body) {
   return {
@@ -14,11 +14,12 @@ function jsonResponse(status, body) {
 }
 
 function Probe() {
-  const { usuario, status, login, logout } = useAuth();
+  const { usuario, status, sessionExpired, login, logout } = useAuth();
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="usuario">{usuario ? usuario.nombre : 'ninguno'}</span>
+      <span data-testid="session-expired">{String(sessionExpired)}</span>
       <button onClick={() => login('demo', 'pass').catch(() => {})}>login</button>
       <button onClick={() => logout()}>logout</button>
     </div>
@@ -150,5 +151,51 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
     expect(screen.getByTestId('usuario').textContent).toBe('ninguno');
+  });
+
+  test('un 401 en una request activa con refresh fallido marca sessionExpired y limpia la sesión', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
+    expect(screen.getByTestId('session-expired').textContent).toBe('false');
+
+    setAccessToken('tok-activo');
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, {})) // request original
+      .mockResolvedValueOnce(jsonResponse(401, {})); // intento de refresh también falla
+
+    await apiFetch('/algo');
+
+    await waitFor(() => expect(screen.getByTestId('session-expired').textContent).toBe('true'));
+    expect(screen.getByTestId('status').textContent).toBe('unauthenticated');
+  });
+
+  test('un login exitoso limpia sessionExpired', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
+
+    setAccessToken('tok-activo');
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401, {}))
+      .mockResolvedValueOnce(jsonResponse(401, {}));
+    await apiFetch('/algo');
+    await waitFor(() => expect(screen.getByTestId('session-expired').textContent).toBe('true'));
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        accessToken: 'tok',
+        refreshToken: 'ref',
+        usuario: { id: 1, nombre: 'Ana', rol: 'RECEPCION' },
+        mustChangePassword: false,
+      })
+    );
+    await userEvent.click(screen.getByText('login'));
+
+    await waitFor(() => expect(screen.getByTestId('session-expired').textContent).toBe('false'));
   });
 });

@@ -15,6 +15,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [status, setStatus] = useState('loading');
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const clearSession = useCallback(() => {
     setAccessToken(null);
@@ -23,9 +24,14 @@ export function AuthProvider({ children }) {
     setStatus('unauthenticated');
   }, []);
 
-  useEffect(() => {
-    setSessionExpiredHandler(clearSession);
+  const handleSessionExpired = useCallback(() => {
+    clearSession();
+    setSessionExpired(true);
   }, [clearSession]);
+
+  useEffect(() => {
+    setSessionExpiredHandler(handleSessionExpired);
+  }, [handleSessionExpired]);
 
   useEffect(() => {
     async function restoreSession() {
@@ -57,6 +63,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function login(identificador, contrasena) {
+    setSessionExpired(false);
     const res = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -92,7 +99,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, status, login, logout, refreshUsuario }}>
+    <AuthContext.Provider value={{ usuario, status, sessionExpired, login, logout, refreshUsuario }}>
       {children}
     </AuthContext.Provider>
   );
