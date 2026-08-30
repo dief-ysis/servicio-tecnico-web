@@ -256,10 +256,10 @@ export function EquipmentDetailPage() {
                 </option>
               ))}
             </Select>
-            {nuevoEstado === 'NO_REPARABLE' && (
+            {nuevoEstado && (
               <Textarea
                 id="motivo"
-                label="Motivo"
+                label={nuevoEstado === 'NO_REPARABLE' ? 'Motivo (obligatorio)' : 'Motivo / diagnóstico (opcional)'}
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
               />

@@ -115,6 +115,25 @@ describe('EquipmentDetailPage', () => {
     );
   });
 
+  test('permite registrar diagnóstico opcional (motivo) en una transición que no es NO_REPARABLE (CU-07)', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+    updateEquipmentState.mockResolvedValue({ id: 5, estado: 'EN_REPARACION' });
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    await userEvent.selectOptions(screen.getByLabelText('Nuevo estado'), 'EN_REPARACION');
+    await userEvent.type(screen.getByLabelText('Motivo / diagnóstico (opcional)'), 'Fuente quemada, se reemplaza');
+    await userEvent.click(screen.getByRole('button', { name: /confirmar/i }));
+
+    await waitFor(() =>
+      expect(updateEquipmentState).toHaveBeenCalledWith('5', {
+        estado: 'EN_REPARACION',
+        motivo: 'Fuente quemada, se reemplaza',
+      })
+    );
+  });
+
   test('marcar NO_REPARABLE sin motivo no llama al backend y muestra error', async () => {
     getEquipmentById.mockResolvedValue(baseEquipo());
 
