@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getOrder, getReceiptBlob } from '../api/orders';
 import { openReceiptInNewTab } from '../lib/receipt';
@@ -15,6 +15,7 @@ export function OrderDetailPage() {
   const { id } = useParams();
   const { usuario } = useAuth();
   const canViewReceipt = usuario.rol === 'RECEPCION' || usuario.rol === 'ADMIN';
+  const canViewEquipment = usuario.rol === 'TECNICO' || usuario.rol === 'ADMIN';
   const [receiptError, setReceiptError] = useState('');
 
   const { data: orden, isLoading, isError } = useQuery({
@@ -57,19 +58,33 @@ export function OrderDetailPage() {
 
       <div className="flex flex-col gap-3">
         <p className="text-ink-500 text-xs uppercase font-semibold">Equipos</p>
-        {orden.equipos.map((equipo) => (
-          <div key={equipo.id} className="border border-ink-700 rounded-md p-3 flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-white font-semibold">{equipo.tipoModelo}</span>
-              <span className="text-ink-500 text-xs">{equipo.idInterno}</span>
+        {orden.equipos.map((equipo) => {
+          const cardClassName = `border border-ink-700 rounded-md p-3 flex flex-col gap-1${
+            canViewEquipment ? ' hover:border-gold' : ''
+          }`;
+          const contenido = (
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-white font-semibold">{equipo.tipoModelo}</span>
+                <span className="text-ink-500 text-xs">{equipo.idInterno}</span>
+              </div>
+              {equipo.marca && <p className="text-ink-500 text-sm">Marca: {equipo.marca}</p>}
+              {equipo.numeroSerie && <p className="text-ink-500 text-sm">N° de serie: {equipo.numeroSerie}</p>}
+              <p className="text-white text-sm">Falla reportada: {equipo.fallaReportada}</p>
+              {equipo.accesorios && <p className="text-ink-500 text-sm">Accesorios: {equipo.accesorios}</p>}
+              <p className="text-ink-500 text-xs uppercase">{equipo.estado}</p>
+            </>
+          );
+          return canViewEquipment ? (
+            <Link key={equipo.id} to={`/equipos/${equipo.id}`} className={cardClassName}>
+              {contenido}
+            </Link>
+          ) : (
+            <div key={equipo.id} className={cardClassName}>
+              {contenido}
             </div>
-            {equipo.marca && <p className="text-ink-500 text-sm">Marca: {equipo.marca}</p>}
-            {equipo.numeroSerie && <p className="text-ink-500 text-sm">N° de serie: {equipo.numeroSerie}</p>}
-            <p className="text-white text-sm">Falla reportada: {equipo.fallaReportada}</p>
-            {equipo.accesorios && <p className="text-ink-500 text-sm">Accesorios: {equipo.accesorios}</p>}
-            <p className="text-ink-500 text-xs uppercase">{equipo.estado}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

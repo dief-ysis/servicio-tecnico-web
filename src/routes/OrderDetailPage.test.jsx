@@ -97,6 +97,29 @@ describe('OrderDetailPage', () => {
     expect(screen.queryByRole('button', { name: /comprobante/i })).not.toBeInTheDocument();
   });
 
+  test('rol TECNICO ve la tarjeta del equipo como link a /equipos/:id', async () => {
+    useAuth.mockReturnValue({ usuario: { rol: 'TECNICO' } });
+    getOrder.mockResolvedValue(ORDEN);
+
+    renderPage();
+    await screen.findByText('Ana Soto');
+
+    expect(screen.getByRole('link', { name: /mixer behringer x32/i })).toHaveAttribute(
+      'href',
+      '/equipos/1'
+    );
+  });
+
+  test('rol RECEPCION no ve la tarjeta del equipo como link', async () => {
+    useAuth.mockReturnValue({ usuario: { rol: 'RECEPCION' } });
+    getOrder.mockResolvedValue(ORDEN);
+
+    renderPage();
+    await screen.findByText('Ana Soto');
+
+    expect(screen.queryByRole('link', { name: /mixer behringer x32/i })).not.toBeInTheDocument();
+  });
+
   test('click en "Ver comprobante" descarga y abre el PDF', async () => {
     getOrder.mockResolvedValue(ORDEN);
     const blob = new Blob(['pdf']);
