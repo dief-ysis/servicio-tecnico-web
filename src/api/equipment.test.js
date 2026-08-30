@@ -1,6 +1,15 @@
 // src/api/equipment.test.js
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { getEquipment, getEquipmentById, updateEquipmentState, assignTechnician, submitBudget } from './equipment';
+import {
+  getEquipment,
+  getEquipmentById,
+  updateEquipmentState,
+  assignTechnician,
+  submitBudget,
+  getPartUsage,
+  registerPartUsage,
+  reversePartUsage,
+} from './equipment';
 import { apiFetch } from '../lib/api';
 
 vi.mock('../lib/api', () => ({
@@ -77,5 +86,47 @@ describe('equipment api', () => {
       method: 'PATCH',
       body: JSON.stringify({ monto: 15000, descripcion: 'Cambio de fuente' }),
     });
+  });
+
+  test('getPartUsage pide /equipos/:id/repuestos', async () => {
+    apiFetch.mockResolvedValue(jsonResponse(200, []));
+
+    await getPartUsage(5);
+
+    expect(apiFetch).toHaveBeenCalledWith('/equipos/5/repuestos');
+  });
+
+  test('registerPartUsage hace POST con repuestoId y cantidad', async () => {
+    apiFetch.mockResolvedValue(jsonResponse(201, { id: 1, repuestoId: 3, cantidad: 2, stockRestante: 8 }));
+
+    await registerPartUsage(5, { repuestoId: 3, cantidad: 2 });
+
+    expect(apiFetch).toHaveBeenCalledWith('/equipos/5/repuestos', {
+      method: 'POST',
+      body: JSON.stringify({ repuestoId: 3, cantidad: 2 }),
+    });
+  });
+
+  test('registerPartUsage lanza un Error con el código del backend si falla', async () => {
+    apiFetch.mockResolvedValue(jsonResponse(409, { error: 'stock_insuficiente' }));
+
+    await expect(registerPartUsage(5, { repuestoId: 3, cantidad: 100 })).rejects.toThrow('stock_insuficiente');
+  });
+
+  test('reversePartUsage hace POST con motivo', async () => {
+    apiFetch.mockResolvedValue(jsonResponse(201, { id: 2, tipo: 'REVERSION' }));
+
+    await reversePartUsage(5, 1, { motivo: 'Repuesto no se usó' });
+
+    expect(apiFetch).toHaveBeenCalledWith('/equipos/5/repuestos/1/reversion', {
+      method: 'POST',
+      body: JSON.stringify({ motivo: 'Repuesto no se usó' }),
+    });
+  });
+
+  test('reversePartUsage lanza un Error con el código del backend si falla', async () => {
+    apiFetch.mockResolvedValue(jsonResponse(409, { error: 'ya_revertido' }));
+
+    await expect(reversePartUsage(5, 1, { motivo: 'x' })).rejects.toThrow('ya_revertido');
   });
 });

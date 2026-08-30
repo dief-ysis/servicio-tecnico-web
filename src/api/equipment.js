@@ -43,3 +43,24 @@ export async function submitBudget(id, { monto, descripcion }) {
   });
   return parseOrThrow(res);
 }
+
+export async function getPartUsage(id) {
+  const res = await apiFetch(`/equipos/${id}/repuestos`);
+  return parseOrThrow(res);
+}
+
+export async function registerPartUsage(id, { repuestoId, cantidad }) {
+  const res = await apiFetch(`/equipos/${id}/repuestos`, {
+    method: 'POST',
+    body: JSON.stringify({ repuestoId, cantidad }),
+  });
+  return parseOrThrow(res);
+}
+
+export async function reversePartUsage(id, movimientoId, { motivo }) {
+  const res = await apiFetch(`/equipos/${id}/repuestos/${movimientoId}/reversion`, {
+    method: 'POST',
+    body: JSON.stringify({ motivo }),
+  });
+  return parseOrThrow(res);
+}
