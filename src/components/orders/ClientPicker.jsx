@@ -6,7 +6,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { ClientFormModal } from '../clients/ClientFormModal';
 
-export function ClientPicker({ cliente, onChange }) {
+export function ClientPicker({ cliente, onChange, id = 'buscar-cliente-orden' }) {
   const [searchInput, setSearchInput] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const q = useDebouncedValue(searchInput, 300);
@@ -37,7 +37,7 @@ export function ClientPicker({ cliente, onChange }) {
   return (
     <div className="flex flex-col gap-2">
       <Input
-        id="buscar-cliente-orden"
+        id={id}
         label="Cliente"
         placeholder="Buscar por nombre, empresa o teléfono..."
         value={searchInput}
