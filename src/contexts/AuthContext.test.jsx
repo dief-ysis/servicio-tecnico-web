@@ -163,8 +163,8 @@ describe('AuthProvider', () => {
 
     setAccessToken('tok-activo');
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(401, {})) // request original
-      .mockResolvedValueOnce(jsonResponse(401, {})); // intento de refresh también falla
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'token_invalido' })) // request original
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'refresh_invalido' })); // el refresh también falla
 
     await apiFetch('/algo');
 
@@ -181,8 +181,8 @@ describe('AuthProvider', () => {
 
     setAccessToken('tok-activo');
     fetchMock
-      .mockResolvedValueOnce(jsonResponse(401, {}))
-      .mockResolvedValueOnce(jsonResponse(401, {}));
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'token_invalido' }))
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'refresh_invalido' }));
     await apiFetch('/algo');
     await waitFor(() => expect(screen.getByTestId('session-expired').textContent).toBe('true'));
 

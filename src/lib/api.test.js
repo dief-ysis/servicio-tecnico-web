@@ -77,6 +77,40 @@ describe('apiFetch', () => {
     expect(body).toEqual({ error: 'credenciales_invalidas' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  test('401 de negocio CON sesión activa (contrasena_incorrecta) no refresca ni reintenta', async () => {
+    // PATCH /auth/password responde 401 contrasena_incorrecta y ADEMÁS registra
+    // un intento fallido con su propio rate limit. Reintentar haría que el
+    // backend contara 2 intentos por cada 1 real del usuario, bloqueando la
+    // cuenta a la mitad de los intentos permitidos.
+    setAccessToken('token-valido');
+    setRefreshToken('ref');
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(401, { error: 'contrasena_incorrecta' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await apiFetch('/auth/password', { method: 'PATCH', body: '{}' });
+    const body = await res.json();
+
+    expect(body).toEqual({ error: 'contrasena_incorrecta' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(getRefreshToken()).toBe('ref');
+  });
+
+  test('401 de token con sesión activa sí refresca y reintenta (no se rompió el caso original)', async () => {
+    setAccessToken('token-vencido');
+    setRefreshToken('ref');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401, { error: 'token_invalido' }))
+      .mockResolvedValueOnce(jsonResponse(200, { accessToken: 'nuevo', refreshToken: 'ref-nuevo' }))
+      .mockResolvedValueOnce(jsonResponse(200, { ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const res = await apiFetch('/ordenes');
+
+    expect(res.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('refreshSession', () => {
