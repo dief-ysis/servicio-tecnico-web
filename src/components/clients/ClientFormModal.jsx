@@ -17,7 +17,8 @@ const SERVER_ERROR_MESSAGES = {
 export function ClientFormModal({ cliente, onClose, onSaved }) {
   const isEdit = Boolean(cliente);
   const queryClient = useQueryClient();
-  const [tipo, setTipo] = useState(cliente?.empresa ? 'EMPRESA' : 'PERSONA');
+  const [tipoInicial] = useState(() => (cliente?.empresa ? 'EMPRESA' : 'PERSONA'));
+  const [tipo, setTipo] = useState(tipoInicial);
   const [form, setForm] = useState({
     nombreOEmpresa: cliente?.empresa || cliente?.nombre || '',
     telefono: cliente?.telefono ?? '',
@@ -61,9 +62,15 @@ export function ClientFormModal({ cliente, onClose, onSaved }) {
       return;
     }
 
+    // Si el usuario no tocó el selector de tipo, preserva el valor original del
+    // campo que no se muestra (un cliente legado puede tener nombre Y empresa a
+    // la vez — RN-01 solo exige uno de los dos, no prohíbe ambos). Solo se
+    // consolida a un solo campo cuando el usuario elige explícitamente cambiar
+    // el tipo.
+    const tipoSinCambios = tipo === tipoInicial;
     mutation.mutate({
-      nombre: tipo === 'PERSONA' ? form.nombreOEmpresa : null,
-      empresa: tipo === 'EMPRESA' ? form.nombreOEmpresa : null,
+      nombre: tipo === 'PERSONA' ? form.nombreOEmpresa : tipoSinCambios ? cliente?.nombre ?? null : null,
+      empresa: tipo === 'EMPRESA' ? form.nombreOEmpresa : tipoSinCambios ? cliente?.empresa ?? null : null,
       telefono: form.telefono,
       correo: form.correo || null,
       rut: form.rut || null,

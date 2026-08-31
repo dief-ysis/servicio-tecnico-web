@@ -138,6 +138,51 @@ describe('ClientFormModal', () => {
     expect(screen.getByLabelText('Nombre de la empresa')).toHaveValue('Luces SpA');
   });
 
+  test('edición: cliente legado con nombre Y empresa a la vez no pierde el campo oculto si no se toca el tipo', async () => {
+    const cliente = { id: 7, nombre: 'Juan Pérez', empresa: 'Acme SpA', telefono: '+56911111111', correo: null, rut: null };
+    updateClient.mockResolvedValue({ ...cliente, telefono: '+56922222222' });
+    renderModal({ cliente });
+
+    // Precarga como Empresa (empresa tiene valor), el "Juan Pérez" no se ve en el form.
+    expect(screen.getByRole('radio', { name: 'Empresa' })).toBeChecked();
+    expect(screen.getByLabelText('Nombre de la empresa')).toHaveValue('Acme SpA');
+
+    await userEvent.clear(screen.getByLabelText('Teléfono'));
+    await userEvent.type(screen.getByLabelText('Teléfono'), '+56922222222');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() =>
+      expect(updateClient).toHaveBeenCalledWith(7, {
+        nombre: 'Juan Pérez',
+        empresa: 'Acme SpA',
+        telefono: '+56922222222',
+        correo: null,
+        rut: null,
+      })
+    );
+  });
+
+  test('edición: cambiar explícitamente el tipo consolida y descarta el campo anterior', async () => {
+    const cliente = { id: 7, nombre: 'Juan Pérez', empresa: 'Acme SpA', telefono: '+56911111111', correo: null, rut: null };
+    updateClient.mockResolvedValue({ ...cliente });
+    renderModal({ cliente });
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Persona' }));
+    await userEvent.clear(screen.getByLabelText('Nombre'));
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Juan Pérez');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() =>
+      expect(updateClient).toHaveBeenCalledWith(7, {
+        nombre: 'Juan Pérez',
+        empresa: null,
+        telefono: '+56911111111',
+        correo: null,
+        rut: null,
+      })
+    );
+  });
+
   test('edición: precarga los campos del cliente y llama a updateClient con su id', async () => {
     const cliente = { id: 5, nombre: 'Ana Soto', empresa: null, telefono: '+56911111111', correo: null, rut: null };
     updateClient.mockResolvedValue({ ...cliente, telefono: '+56922222222' });
