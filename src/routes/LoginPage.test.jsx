@@ -61,4 +61,12 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('Usuario o contraseña incorrectos.')).toBeInTheDocument();
   });
+
+  test('sessionExpired=true muestra el mensaje de sesión expirada', () => {
+    useAuth.mockReturnValue({ login: vi.fn(), usuario: null, sessionExpired: true });
+
+    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+
+    expect(screen.getByText('Tu sesión expiró, ingresa de nuevo.')).toBeInTheDocument();
+  });
 });
