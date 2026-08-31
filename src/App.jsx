@@ -12,6 +12,7 @@ import { OrdersPage } from './routes/OrdersPage';
 import { OrderDetailPage } from './routes/OrderDetailPage';
 import { EquipmentsPage } from './routes/EquipmentsPage';
 import { EquipmentDetailPage } from './routes/EquipmentDetailPage';
+import { PartsPage } from './routes/PartsPage';
 
 const queryClient = new QueryClient();
 
@@ -78,7 +79,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/repuestos" element={<ComingSoonPage title="Repuestos" />} />
+              <Route
+                path="/repuestos"
+                element={
+                  <ProtectedRoute roles={['RECEPCION', 'TECNICO', 'ADMIN']}>
+                    <PartsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/reportes"
                 element={
