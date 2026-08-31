@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient, updateClient } from '../../api/clients';
+import { isValidEmail, isValidRut } from '../../lib/validators';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { ErrorBanner } from '../ui/ErrorBanner';
@@ -9,14 +10,17 @@ import { Modal } from '../ui/Modal';
 const SERVER_ERROR_MESSAGES = {
   telefono_requerido: 'El teléfono es requerido.',
   nombre_o_empresa_requerido: 'Debes indicar nombre o empresa.',
+  correo_invalido: 'El correo no tiene un formato válido.',
+  rut_invalido: 'El RUT no es válido.',
 };
 
 export function ClientFormModal({ cliente, onClose, onSaved }) {
   const isEdit = Boolean(cliente);
   const queryClient = useQueryClient();
+  const [tipoInicial] = useState(() => (cliente?.empresa ? 'EMPRESA' : 'PERSONA'));
+  const [tipo, setTipo] = useState(tipoInicial);
   const [form, setForm] = useState({
-    nombre: cliente?.nombre ?? '',
-    empresa: cliente?.empresa ?? '',
+    nombreOEmpresa: cliente?.empresa || cliente?.nombre || '',
     telefono: cliente?.telefono ?? '',
     correo: cliente?.correo ?? '',
     rut: cliente?.rut ?? '',
@@ -45,14 +49,28 @@ export function ClientFormModal({ cliente, onClose, onSaved }) {
       setValidationError('El teléfono es requerido.');
       return;
     }
-    if (!form.nombre && !form.empresa) {
+    if (!form.nombreOEmpresa) {
       setValidationError('Debes indicar nombre o empresa.');
       return;
     }
+    if (form.correo && !isValidEmail(form.correo)) {
+      setValidationError('El correo no tiene un formato válido.');
+      return;
+    }
+    if (form.rut && !isValidRut(form.rut)) {
+      setValidationError('El RUT no es válido.');
+      return;
+    }
 
+    // Si el usuario no tocó el selector de tipo, preserva el valor original del
+    // campo que no se muestra (un cliente legado puede tener nombre Y empresa a
+    // la vez — RN-01 solo exige uno de los dos, no prohíbe ambos). Solo se
+    // consolida a un solo campo cuando el usuario elige explícitamente cambiar
+    // el tipo.
+    const tipoSinCambios = tipo === tipoInicial;
     mutation.mutate({
-      nombre: form.nombre || null,
-      empresa: form.empresa || null,
+      nombre: tipo === 'PERSONA' ? form.nombreOEmpresa : tipoSinCambios ? cliente?.nombre ?? null : null,
+      empresa: tipo === 'EMPRESA' ? form.nombreOEmpresa : tipoSinCambios ? cliente?.empresa ?? null : null,
       telefono: form.telefono,
       correo: form.correo || null,
       rut: form.rut || null,
@@ -70,8 +88,36 @@ export function ClientFormModal({ cliente, onClose, onSaved }) {
         className="bg-ink-900 border border-ink-700 rounded-lg p-6 w-full max-w-sm flex flex-col gap-3"
       >
         <h2 className="text-white text-base font-bold">{isEdit ? 'Editar cliente' : 'Nuevo cliente'}</h2>
-        <Input id="nombre" label="Nombre" value={form.nombre} onChange={(e) => updateField('nombre', e.target.value)} />
-        <Input id="empresa" label="Empresa" value={form.empresa} onChange={(e) => updateField('empresa', e.target.value)} />
+        <div className="flex gap-4 text-sm text-ink-500">
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name="tipo-cliente"
+              value="PERSONA"
+              checked={tipo === 'PERSONA'}
+              onChange={() => setTipo('PERSONA')}
+              className="accent-gold"
+            />
+            Persona
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="radio"
+              name="tipo-cliente"
+              value="EMPRESA"
+              checked={tipo === 'EMPRESA'}
+              onChange={() => setTipo('EMPRESA')}
+              className="accent-gold"
+            />
+            Empresa
+          </label>
+        </div>
+        <Input
+          id="nombreOEmpresa"
+          label={tipo === 'PERSONA' ? 'Nombre' : 'Nombre de la empresa'}
+          value={form.nombreOEmpresa}
+          onChange={(e) => updateField('nombreOEmpresa', e.target.value)}
+        />
         <Input id="telefono" label="Teléfono" value={form.telefono} onChange={(e) => updateField('telefono', e.target.value)} />
         <Input id="correo" label="Correo" value={form.correo} onChange={(e) => updateField('correo', e.target.value)} />
         <Input id="rut" label="RUT" value={form.rut} onChange={(e) => updateField('rut', e.target.value)} />

@@ -66,6 +66,123 @@ describe('ClientFormModal', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
+  test('alta: elegir "Empresa" guarda el valor en empresa, no en nombre', async () => {
+    createClient.mockResolvedValue({ id: 9, empresa: 'Luces SpA', telefono: '+56911111111' });
+    renderModal({ cliente: null });
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Empresa' }));
+    await userEvent.type(screen.getByLabelText('Nombre de la empresa'), 'Luces SpA');
+    await userEvent.type(screen.getByLabelText('Teléfono'), '+56911111111');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() =>
+      expect(createClient).toHaveBeenCalledWith({
+        nombre: null,
+        empresa: 'Luces SpA',
+        telefono: '+56911111111',
+        correo: null,
+        rut: null,
+      })
+    );
+  });
+
+  test('alta: correo con formato inválido muestra error sin llamar a createClient', async () => {
+    renderModal({ cliente: null });
+
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Ana Soto');
+    await userEvent.type(screen.getByLabelText('Teléfono'), '+56911111111');
+    await userEvent.type(screen.getByLabelText('Correo'), 'no-es-un-correo');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    expect(await screen.findByText('El correo no tiene un formato válido.')).toBeInTheDocument();
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  test('alta: RUT con dígito verificador inválido muestra error sin llamar a createClient', async () => {
+    renderModal({ cliente: null });
+
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Ana Soto');
+    await userEvent.type(screen.getByLabelText('Teléfono'), '+56911111111');
+    await userEvent.type(screen.getByLabelText('RUT'), '12345678-9');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    expect(await screen.findByText('El RUT no es válido.')).toBeInTheDocument();
+    expect(createClient).not.toHaveBeenCalled();
+  });
+
+  test('alta: RUT válido con puntos sí llama a createClient', async () => {
+    createClient.mockResolvedValue({ id: 9, nombre: 'Ana Soto', telefono: '+56911111111', rut: '12.345.678-5' });
+    renderModal({ cliente: null });
+
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Ana Soto');
+    await userEvent.type(screen.getByLabelText('Teléfono'), '+56911111111');
+    await userEvent.type(screen.getByLabelText('RUT'), '12.345.678-5');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() =>
+      expect(createClient).toHaveBeenCalledWith({
+        nombre: 'Ana Soto',
+        empresa: null,
+        telefono: '+56911111111',
+        correo: null,
+        rut: '12.345.678-5',
+      })
+    );
+  });
+
+  test('edición: cliente con empresa precarga el tipo "Empresa" y el valor en el campo único', async () => {
+    const cliente = { id: 6, nombre: null, empresa: 'Luces SpA', telefono: '+56911111111', correo: null, rut: null };
+    renderModal({ cliente });
+
+    expect(screen.getByRole('radio', { name: 'Empresa' })).toBeChecked();
+    expect(screen.getByLabelText('Nombre de la empresa')).toHaveValue('Luces SpA');
+  });
+
+  test('edición: cliente legado con nombre Y empresa a la vez no pierde el campo oculto si no se toca el tipo', async () => {
+    const cliente = { id: 7, nombre: 'Juan Pérez', empresa: 'Acme SpA', telefono: '+56911111111', correo: null, rut: null };
+    updateClient.mockResolvedValue({ ...cliente, telefono: '+56922222222' });
+    renderModal({ cliente });
+
+    // Precarga como Empresa (empresa tiene valor), el "Juan Pérez" no se ve en el form.
+    expect(screen.getByRole('radio', { name: 'Empresa' })).toBeChecked();
+    expect(screen.getByLabelText('Nombre de la empresa')).toHaveValue('Acme SpA');
+
+    await userEvent.clear(screen.getByLabelText('Teléfono'));
+    await userEvent.type(screen.getByLabelText('Teléfono'), '+56922222222');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() =>
+      expect(updateClient).toHaveBeenCalledWith(7, {
+        nombre: 'Juan Pérez',
+        empresa: 'Acme SpA',
+        telefono: '+56922222222',
+        correo: null,
+        rut: null,
+      })
+    );
+  });
+
+  test('edición: cambiar explícitamente el tipo consolida y descarta el campo anterior', async () => {
+    const cliente = { id: 7, nombre: 'Juan Pérez', empresa: 'Acme SpA', telefono: '+56911111111', correo: null, rut: null };
+    updateClient.mockResolvedValue({ ...cliente });
+    renderModal({ cliente });
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Persona' }));
+    await userEvent.clear(screen.getByLabelText('Nombre'));
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Juan Pérez');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() =>
+      expect(updateClient).toHaveBeenCalledWith(7, {
+        nombre: 'Juan Pérez',
+        empresa: null,
+        telefono: '+56911111111',
+        correo: null,
+        rut: null,
+      })
+    );
+  });
+
   test('edición: precarga los campos del cliente y llama a updateClient con su id', async () => {
     const cliente = { id: 5, nombre: 'Ana Soto', empresa: null, telefono: '+56911111111', correo: null, rut: null };
     updateClient.mockResolvedValue({ ...cliente, telefono: '+56922222222' });
