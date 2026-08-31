@@ -10,6 +10,8 @@ import { ComingSoonPage } from './routes/ComingSoonPage';
 import { ClientsPage } from './routes/ClientsPage';
 import { OrdersPage } from './routes/OrdersPage';
 import { OrderDetailPage } from './routes/OrderDetailPage';
+import { EquipmentsPage } from './routes/EquipmentsPage';
+import { EquipmentDetailPage } from './routes/EquipmentDetailPage';
 
 const queryClient = new QueryClient();
 
@@ -64,7 +66,15 @@ function App() {
                 path="/equipos"
                 element={
                   <ProtectedRoute roles={['TECNICO', 'ADMIN']}>
-                    <ComingSoonPage title="Equipos" />
+                    <EquipmentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/equipos/:id"
+                element={
+                  <ProtectedRoute roles={['TECNICO', 'ADMIN']}>
+                    <EquipmentDetailPage />
                   </ProtectedRoute>
                 }
               />
