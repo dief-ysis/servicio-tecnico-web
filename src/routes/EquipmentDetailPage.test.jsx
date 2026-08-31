@@ -223,6 +223,65 @@ describe('EquipmentDetailPage', () => {
     );
   });
 
+  test('presupuesto con monto 0 muestra el error de validación sin llamar a submitBudget', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    await userEvent.type(screen.getByLabelText('Monto'), '0');
+    await userEvent.type(screen.getByLabelText('Descripción'), 'Cambio de fuente');
+    await userEvent.click(screen.getByRole('button', { name: /enviar presupuesto/i }));
+
+    expect(await screen.findByText('El monto debe ser mayor a cero.')).toBeInTheDocument();
+    expect(submitBudget).not.toHaveBeenCalled();
+  });
+
+  test('presupuesto sin descripción muestra el error de validación sin llamar a submitBudget', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    await userEvent.type(screen.getByLabelText('Monto'), '15000');
+    await userEvent.click(screen.getByRole('button', { name: /enviar presupuesto/i }));
+
+    expect(await screen.findByText('La descripción es requerida.')).toBeInTheDocument();
+    expect(submitBudget).not.toHaveBeenCalled();
+  });
+
+  test('repuesto con cantidad 0 muestra el error de validación sin llamar a registerPartUsage', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    await userEvent.selectOptions(screen.getByLabelText('Repuesto'), 'Fusible 5A (stock: 10)');
+    await userEvent.type(screen.getByLabelText('Cantidad'), '0');
+    await userEvent.click(screen.getByRole('button', { name: /^registrar$/i }));
+
+    expect(
+      await screen.findByText('La cantidad debe ser un número entero mayor a cero.')
+    ).toBeInTheDocument();
+    expect(registerPartUsage).not.toHaveBeenCalled();
+  });
+
+  test('repuesto con cantidad decimal muestra el error de validación sin llamar a registerPartUsage', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    await userEvent.selectOptions(screen.getByLabelText('Repuesto'), 'Fusible 5A (stock: 10)');
+    await userEvent.type(screen.getByLabelText('Cantidad'), '1.5');
+    await userEvent.click(screen.getByRole('button', { name: /^registrar$/i }));
+
+    expect(
+      await screen.findByText('La cantidad debe ser un número entero mayor a cero.')
+    ).toBeInTheDocument();
+    expect(registerPartUsage).not.toHaveBeenCalled();
+  });
+
   test('registrar un repuesto válido llama a registerPartUsage', async () => {
     getEquipmentById.mockResolvedValue(baseEquipo());
     registerPartUsage.mockResolvedValue({ id: 1, stockRestante: 8 });
