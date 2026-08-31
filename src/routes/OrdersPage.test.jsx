@@ -16,6 +16,13 @@ vi.mock('../contexts/AuthContext', () => ({
 vi.mock('../components/orders/OrderFormModal', () => ({
   OrderFormModal: () => <div data-testid="order-form-modal" />,
 }));
+vi.mock('../components/orders/ClientPicker', () => ({
+  ClientPicker: ({ cliente, onChange }) => (
+    <button type="button" onClick={() => onChange(cliente ? null : { id: 3, nombre: 'Ana Soto' })}>
+      filtro-cliente-mock
+    </button>
+  ),
+}));
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -80,6 +87,40 @@ describe('OrdersPage', () => {
     expect(screen.getByTestId('order-form-modal')).toBeInTheDocument();
   });
 
+  test('seleccionar un cliente en el filtro consulta getOrders con clienteId', async () => {
+    getOrders.mockResolvedValue({ data: [], total: 0, limit: 20, offset: 0 });
+    renderPage();
+    await waitFor(() =>
+      expect(getOrders).toHaveBeenCalledWith({ clienteId: undefined, limit: 20, offset: 0 })
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /filtro-cliente-mock/i }));
+
+    await waitFor(() =>
+      expect(getOrders).toHaveBeenLastCalledWith({ clienteId: 3, limit: 20, offset: 0 })
+    );
+  });
+
+  test('seleccionar un cliente en el filtro realmente resetea la página (no solo coincide con offset 0 inicial)', async () => {
+    const page1 = Array.from({ length: 20 }, (_, i) => ({ ...ORDEN, id: i, cliente: { ...ORDEN.cliente, nombre: `Cliente ${i}` } }));
+    getOrders.mockResolvedValue({ data: page1, total: 45, limit: 20, offset: 0 });
+
+    renderPage();
+    await screen.findByText('Cliente 0');
+
+    // Avanza a la página 2 (offset 20) ANTES de aplicar el filtro.
+    await userEvent.click(screen.getByRole('button', { name: /siguiente/i }));
+    await waitFor(() =>
+      expect(getOrders).toHaveBeenLastCalledWith({ clienteId: undefined, limit: 20, offset: 20 })
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /filtro-cliente-mock/i }));
+
+    await waitFor(() =>
+      expect(getOrders).toHaveBeenLastCalledWith({ clienteId: 3, limit: 20, offset: 0 })
+    );
+  });
+
   test('paginado: "Anterior" deshabilitado en la primera página, "Siguiente" navega a offset 20', async () => {
     const page1 = Array.from({ length: 20 }, (_, i) => ({ ...ORDEN, id: i, cliente: { ...ORDEN.cliente, nombre: `Cliente ${i}` } }));
     const page2 = Array.from({ length: 20 }, (_, i) => ({ ...ORDEN, id: i + 20, cliente: { ...ORDEN.cliente, nombre: `Cliente ${i + 20}` } }));
@@ -96,7 +137,9 @@ describe('OrdersPage', () => {
 
     await userEvent.click(siguienteBtn);
 
-    await waitFor(() => expect(getOrders).toHaveBeenLastCalledWith({ limit: 20, offset: 20 }));
+    await waitFor(() =>
+      expect(getOrders).toHaveBeenLastCalledWith({ clienteId: undefined, limit: 20, offset: 20 })
+    );
     await screen.findByText('Cliente 20');
   });
 });
