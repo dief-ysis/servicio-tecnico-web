@@ -293,7 +293,7 @@ export function EquipmentDetailPage() {
           <p className="text-ink-500 text-sm">Sin presupuesto registrado.</p>
         )}
         {equipo.estado === 'EN_DIAGNOSTICO' && (
-          <form onSubmit={handleEnviarPresupuesto} className="flex flex-col gap-2">
+          <form onSubmit={handleEnviarPresupuesto} noValidate className="flex flex-col gap-2">
             <Input
               id="presupuesto-monto"
               label="Monto"
@@ -325,7 +325,7 @@ export function EquipmentDetailPage() {
       <div className="border border-ink-700 rounded-md p-3 flex flex-col gap-2">
         <p className="text-ink-500 text-xs uppercase font-semibold">Repuestos usados</p>
 
-        <form onSubmit={handleRegistrarRepuesto} className="flex flex-col gap-2">
+        <form onSubmit={handleRegistrarRepuesto} noValidate className="flex flex-col gap-2">
           <Select id="repuesto" label="Repuesto" value={repuestoId} onChange={(e) => setRepuestoId(e.target.value)}>
             <option value="">Selecciona un repuesto</option>
             {(repuestos || []).map((r) => (
