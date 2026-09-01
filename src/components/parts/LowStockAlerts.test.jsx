@@ -58,12 +58,14 @@ describe('LowStockAlerts', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  test('si getLowStockAlerts falla, no rompe (con la query ya en error)', async () => {
+  test('si getLowStockAlerts falla, avisa en vez de desaparecer en silencio', async () => {
     getLowStockAlerts.mockRejectedValue(new Error('fallo_red'));
 
-    const { container, queryClient } = renderAlerts();
+    const { queryClient } = renderAlerts();
 
     await esperarQuery(queryClient, 'error');
-    expect(container).toBeEmptyDOMElement();
+    expect(
+      screen.getByText('No se pudo cargar el estado de stock de los repuestos.')
+    ).toBeInTheDocument();
   });
 });

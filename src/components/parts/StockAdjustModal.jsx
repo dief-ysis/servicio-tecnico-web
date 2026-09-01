@@ -8,6 +8,10 @@ import { Modal } from '../ui/Modal';
 
 const SERVER_ERROR_MESSAGES = {
   stock_insuficiente: 'No hay stock suficiente para este ajuste.',
+  sin_permiso: 'No tienes permiso para ajustar el stock.',
+  repuesto_no_encontrado: 'Ese repuesto ya no existe.',
+  // La validación del cliente ataja este caso antes de enviar; se mapea igual
+  // por si esa validación cambia.
   ajuste_invalido: 'La cantidad debe ser un número entero distinto de cero.',
 };
 

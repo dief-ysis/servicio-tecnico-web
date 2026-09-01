@@ -143,9 +143,10 @@ describe('ClientFormModal', () => {
     updateClient.mockResolvedValue({ ...cliente, telefono: '+56922222222' });
     renderModal({ cliente });
 
-    // Precarga como Empresa (empresa tiene valor), el "Juan Pérez" no se ve en el form.
-    expect(screen.getByRole('radio', { name: 'Empresa' })).toBeChecked();
-    expect(screen.getByLabelText('Nombre de la empresa')).toHaveValue('Acme SpA');
+    // Precarga como Persona, igual que ClientsTable/ClientPicker (nombre
+    // primero): el "Acme SpA" no se ve en el form, pero no debe perderse.
+    expect(screen.getByRole('radio', { name: 'Persona' })).toBeChecked();
+    expect(screen.getByLabelText('Nombre')).toHaveValue('Juan Pérez');
 
     await userEvent.clear(screen.getByLabelText('Teléfono'));
     await userEvent.type(screen.getByLabelText('Teléfono'), '+56922222222');
@@ -167,15 +168,17 @@ describe('ClientFormModal', () => {
     updateClient.mockResolvedValue({ ...cliente });
     renderModal({ cliente });
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Persona' }));
-    await userEvent.clear(screen.getByLabelText('Nombre'));
-    await userEvent.type(screen.getByLabelText('Nombre'), 'Juan Pérez');
+    // Arranca en Persona (nombre tiene valor); pasarlo a Empresa es un cambio
+    // explícito del usuario, y ahí sí corresponde descartar el campo anterior.
+    await userEvent.click(screen.getByRole('radio', { name: 'Empresa' }));
+    await userEvent.clear(screen.getByLabelText('Nombre de la empresa'));
+    await userEvent.type(screen.getByLabelText('Nombre de la empresa'), 'Acme SpA');
     await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
 
     await waitFor(() =>
       expect(updateClient).toHaveBeenCalledWith(7, {
-        nombre: 'Juan Pérez',
-        empresa: null,
+        nombre: null,
+        empresa: 'Acme SpA',
         telefono: '+56911111111',
         correo: null,
         rut: null,

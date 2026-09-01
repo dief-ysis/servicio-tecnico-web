@@ -83,7 +83,11 @@ export function EquipmentDetailPage() {
 
   const { data: repuestos } = useQuery({
     queryKey: ['repuestos'],
-    queryFn: getParts,
+    // Envuelto a propósito: pasar getParts directo le entrega el
+    // QueryFunctionContext de react-query, que la función destructura como
+    // {buscar, incluirInactivos}. Hoy salen undefined y funciona de casualidad,
+    // solo porque ninguna clave del contexto se llama igual.
+    queryFn: () => getParts(),
   });
 
   const { data: movimientos } = useQuery({
