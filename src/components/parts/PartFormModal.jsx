@@ -8,10 +8,16 @@ import { ErrorBanner } from '../ui/ErrorBanner';
 import { Modal } from '../ui/Modal';
 
 const SERVER_ERROR_MESSAGES = {
+  codigo_sku_en_uso: 'Ese código (SKU) ya está en uso.',
+  sin_permiso: 'No tienes permiso para modificar el catálogo de repuestos.',
+  repuesto_no_encontrado: 'Ese repuesto ya no existe.',
+  // Los siguientes los ataja la validación del cliente antes de llegar acá; se
+  // mapean igual porque el backend puede devolverlos si esa validación cambia
+  // o si la request llega por otra vía.
   nombre_requerido: 'El nombre es requerido.',
   stock_actual_invalido: 'El stock inicial debe ser un número entero mayor o igual a cero.',
   stock_minimo_invalido: 'El stock mínimo debe ser un número entero mayor o igual a cero.',
-  codigo_sku_en_uso: 'Ese código (SKU) ya está en uso.',
+  activo_invalido: 'El estado activo/inactivo no es válido.',
 };
 
 function esEnteroNoNegativo(value) {

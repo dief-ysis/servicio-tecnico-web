@@ -17,10 +17,13 @@ const SERVER_ERROR_MESSAGES = {
 export function ClientFormModal({ cliente, onClose, onSaved }) {
   const isEdit = Boolean(cliente);
   const queryClient = useQueryClient();
-  const [tipoInicial] = useState(() => (cliente?.empresa ? 'EMPRESA' : 'PERSONA'));
+  // Mismo desempate que ClientsTable/ClientPicker/OrderDetailPage (nombre
+  // primero): en un cliente legado con ambos campos, la tabla y el formulario
+  // mostraban valores distintos para el mismo cliente.
+  const [tipoInicial] = useState(() => (cliente?.empresa && !cliente?.nombre ? 'EMPRESA' : 'PERSONA'));
   const [tipo, setTipo] = useState(tipoInicial);
   const [form, setForm] = useState({
-    nombreOEmpresa: cliente?.empresa || cliente?.nombre || '',
+    nombreOEmpresa: cliente?.nombre || cliente?.empresa || '',
     telefono: cliente?.telefono ?? '',
     correo: cliente?.correo ?? '',
     rut: cliente?.rut ?? '',
