@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrderDetailPage } from './OrderDetailPage';
 import { getOrder, getReceiptBlob } from '../api/orders';
-import { openReceiptInNewTab } from '../lib/receipt';
+import { downloadReceipt } from '../lib/receipt';
 import { useAuth } from '../contexts/AuthContext';
 
 vi.mock('../api/orders', () => ({
@@ -13,7 +13,7 @@ vi.mock('../api/orders', () => ({
   getReceiptBlob: vi.fn(),
 }));
 vi.mock('../lib/receipt', () => ({
-  openReceiptInNewTab: vi.fn(),
+  downloadReceipt: vi.fn(),
 }));
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: vi.fn(),
@@ -54,7 +54,7 @@ describe('OrderDetailPage', () => {
   beforeEach(() => {
     getOrder.mockReset();
     getReceiptBlob.mockReset();
-    openReceiptInNewTab.mockReset();
+    downloadReceipt.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue({ usuario: { rol: 'RECEPCION' } });
   });
@@ -120,7 +120,7 @@ describe('OrderDetailPage', () => {
     expect(screen.queryByRole('link', { name: /mixer behringer x32/i })).not.toBeInTheDocument();
   });
 
-  test('click en "Ver comprobante" descarga y abre el PDF', async () => {
+  test('click en "Ver comprobante" descarga el PDF', async () => {
     getOrder.mockResolvedValue(ORDEN);
     const blob = new Blob(['pdf']);
     getReceiptBlob.mockResolvedValue(blob);
@@ -131,6 +131,6 @@ describe('OrderDetailPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /comprobante/i }));
 
     await waitFor(() => expect(getReceiptBlob).toHaveBeenCalledWith('7'));
-    expect(openReceiptInNewTab).toHaveBeenCalledWith(blob);
+    expect(downloadReceipt).toHaveBeenCalledWith(blob, 'comprobante-7.pdf');
   });
 });

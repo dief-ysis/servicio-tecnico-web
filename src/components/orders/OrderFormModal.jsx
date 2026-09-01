@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createOrder, getReceiptBlob } from '../../api/orders';
-import { openReceiptInNewTab } from '../../lib/receipt';
+import { downloadReceipt } from '../../lib/receipt';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -39,10 +39,10 @@ export function OrderFormModal({ onClose }) {
       queryClient.invalidateQueries({ queryKey: ['ordenes'] });
       try {
         const blob = await getReceiptBlob(orden.id);
-        openReceiptInNewTab(blob);
+        downloadReceipt(blob, `comprobante-${orden.id}.pdf`);
       } catch {
-        // La orden ya se creó; el comprobante se puede reimprimir después
-        // desde el detalle de la orden. No bloquear el cierre del modal.
+        // La orden ya se creó; el comprobante se puede volver a descargar
+        // después desde el detalle de la orden. No bloquear el cierre del modal.
       }
       onClose();
     },
