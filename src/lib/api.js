@@ -67,13 +67,32 @@ function buildRequestInit(options) {
   };
 }
 
+// El backend usa 401 tanto para "tu token no sirve" (token_invalido /
+// token_requerido, del middleware authenticate) como para errores de negocio
+// (contrasena_incorrecta en PATCH /auth/password, credenciales_invalidas en
+// login, etc.). Solo los primeros deben disparar refresh + reintento: reintentar
+// un error de negocio reenvía la request y hace que el backend cuente el intento
+// fallido dos veces (ver PATCH /auth/password, que lleva su propio rate limit).
+const TOKEN_ERROR_CODES = ['token_invalido', 'token_requerido'];
+
+async function esErrorDeToken(res) {
+  try {
+    const data = await res.clone().json();
+    return TOKEN_ERROR_CODES.includes(data?.error);
+  } catch {
+    // 401 sin cuerpo JSON (proxy, gateway): no podemos distinguir, así que
+    // conservamos el comportamiento previo e intentamos refrescar.
+    return true;
+  }
+}
+
 export async function apiFetch(path, options = {}) {
   const hadToken = Boolean(accessToken);
   const doFetch = () => fetch(`${API_URL}${path}`, buildRequestInit(options));
 
   let res = await doFetch();
 
-  if (res.status === 401 && hadToken) {
+  if (res.status === 401 && hadToken && (await esErrorDeToken(res))) {
     const refreshed = await refreshSession();
     if (refreshed) {
       res = await doFetch();
