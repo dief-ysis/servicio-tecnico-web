@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { apiFetch } from '../lib/api';
+import { apiFetch, setAccessToken, setRefreshToken } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -28,9 +28,17 @@ export function ChangePasswordPage() {
         method: 'PATCH',
         body: JSON.stringify({ contrasenaActual, contrasenaNueva }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'error_desconocido');
+      }
+      // El backend revoca todos los refresh tokens al cambiar la contraseña
+      // (incluido el de esta sesión) y devuelve un par nuevo. Si no lo
+      // guardamos, la sesión queda con un token revocado y se cae sola al
+      // vencer el access token.
+      if (data.accessToken && data.refreshToken) {
+        setAccessToken(data.accessToken);
+        setRefreshToken(data.refreshToken);
       }
       await refreshUsuario();
       navigate('/');
