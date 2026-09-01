@@ -10,10 +10,22 @@ vi.mock('../../api/parts', () => ({
 
 function renderAlerts() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <LowStockAlerts />
-    </QueryClientProvider>
+  return {
+    queryClient,
+    ...render(
+      <QueryClientProvider client={queryClient}>
+        <LowStockAlerts />
+      </QueryClientProvider>
+    ),
+  };
+}
+
+// El componente no renderiza nada ni mientras carga ni cuando no hay alertas,
+// así que "el DOM está vacío" no distingue un caso del otro. Hay que esperar a
+// que la query realmente termine antes de afirmar sobre el resultado.
+function esperarQuery(queryClient, estado) {
+  return waitFor(() =>
+    expect(queryClient.getQueryState(['repuestos-alertas'])?.status).toBe(estado)
   );
 }
 
@@ -36,21 +48,22 @@ describe('LowStockAlerts', () => {
     expect(screen.getByText('Stock bajo (2)')).toBeInTheDocument();
   });
 
-  test('sin alertas, no renderiza nada', async () => {
+  test('sin alertas, no renderiza nada (con la query ya resuelta)', async () => {
     getLowStockAlerts.mockResolvedValue([]);
 
-    const { container } = renderAlerts();
+    const { container, queryClient } = renderAlerts();
 
-    await waitFor(() => expect(getLowStockAlerts).toHaveBeenCalled());
+    await esperarQuery(queryClient, 'success');
+    expect(queryClient.getQueryData(['repuestos-alertas'])).toEqual([]);
     expect(container).toBeEmptyDOMElement();
   });
 
-  test('si getLowStockAlerts falla, no rompe (no renderiza nada)', async () => {
+  test('si getLowStockAlerts falla, no rompe (con la query ya en error)', async () => {
     getLowStockAlerts.mockRejectedValue(new Error('fallo_red'));
 
-    const { container } = renderAlerts();
+    const { container, queryClient } = renderAlerts();
 
-    await waitFor(() => expect(getLowStockAlerts).toHaveBeenCalled());
+    await esperarQuery(queryClient, 'error');
     expect(container).toBeEmptyDOMElement();
   });
 });
