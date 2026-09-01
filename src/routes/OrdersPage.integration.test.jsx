@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrdersPage } from './OrdersPage';
 import { getOrders, createOrder, getReceiptBlob } from '../api/orders';
 import { getClients } from '../api/clients';
-import { openReceiptInNewTab } from '../lib/receipt';
+import { downloadReceipt } from '../lib/receipt';
 import { useAuth } from '../contexts/AuthContext';
 
 vi.mock('../api/orders', () => ({
@@ -18,7 +18,7 @@ vi.mock('../api/clients', () => ({
   getClients: vi.fn(),
 }));
 vi.mock('../lib/receipt', () => ({
-  openReceiptInNewTab: vi.fn(),
+  downloadReceipt: vi.fn(),
 }));
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: vi.fn(),
@@ -41,12 +41,12 @@ describe('OrdersPage + OrderFormModal (integración)', () => {
     createOrder.mockReset();
     getReceiptBlob.mockReset();
     getClients.mockReset();
-    openReceiptInNewTab.mockReset();
+    downloadReceipt.mockReset();
     useAuth.mockReset();
     useAuth.mockReturnValue({ usuario: { rol: 'RECEPCION' } });
   });
 
-  test('crear una orden para un cliente existente refresca la lista y abre el comprobante', async () => {
+  test('crear una orden para un cliente existente refresca la lista y descarga el comprobante', async () => {
     getOrders.mockResolvedValueOnce({ data: [], total: 0, limit: 20, offset: 0 });
     getOrders.mockResolvedValue({
       data: [
@@ -102,7 +102,7 @@ describe('OrdersPage + OrderFormModal (integración)', () => {
     );
 
     await waitFor(() => expect(getReceiptBlob).toHaveBeenCalledWith(5));
-    expect(openReceiptInNewTab).toHaveBeenCalledWith(blob);
+    expect(downloadReceipt).toHaveBeenCalledWith(blob, 'comprobante-5.pdf');
     expect(await screen.findByText('Ana Soto')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^guardar$/i })).not.toBeInTheDocument();
   });

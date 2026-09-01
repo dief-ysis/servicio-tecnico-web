@@ -4,14 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { OrderFormModal } from './OrderFormModal';
 import { createOrder, getReceiptBlob } from '../../api/orders';
-import { openReceiptInNewTab } from '../../lib/receipt';
+import { downloadReceipt } from '../../lib/receipt';
 
 vi.mock('../../api/orders', () => ({
   createOrder: vi.fn(),
   getReceiptBlob: vi.fn(),
 }));
 vi.mock('../../lib/receipt', () => ({
-  openReceiptInNewTab: vi.fn(),
+  downloadReceipt: vi.fn(),
 }));
 vi.mock('./ClientPicker', () => ({
   ClientPicker: ({ cliente, onChange }) => (
@@ -40,7 +40,7 @@ describe('OrderFormModal', () => {
   beforeEach(() => {
     createOrder.mockReset();
     getReceiptBlob.mockReset();
-    openReceiptInNewTab.mockReset();
+    downloadReceipt.mockReset();
   });
 
   test('sin cliente seleccionado, muestra error de validación sin llamar a createOrder', async () => {
@@ -75,7 +75,7 @@ describe('OrderFormModal', () => {
     expect(screen.getAllByText(/^Equipo \d$/)).toHaveLength(1);
   });
 
-  test('envía la orden con los datos completos, invalida la query y abre el comprobante', async () => {
+  test('envía la orden con los datos completos, invalida la query y descarga el comprobante', async () => {
     const onClose = vi.fn();
     createOrder.mockResolvedValue({ id: 42 });
     const blob = new Blob(['pdf'], { type: 'application/pdf' });
@@ -104,7 +104,7 @@ describe('OrderFormModal', () => {
     );
 
     await waitFor(() => expect(getReceiptBlob).toHaveBeenCalledWith(42));
-    expect(openReceiptInNewTab).toHaveBeenCalledWith(blob);
+    expect(downloadReceipt).toHaveBeenCalledWith(blob, 'comprobante-42.pdf');
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 

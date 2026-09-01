@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getOrder, getReceiptBlob } from '../api/orders';
-import { openReceiptInNewTab } from '../lib/receipt';
+import { downloadReceipt } from '../lib/receipt';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
@@ -27,7 +27,7 @@ export function OrderDetailPage() {
     setReceiptError('');
     try {
       const blob = await getReceiptBlob(id);
-      openReceiptInNewTab(blob);
+      downloadReceipt(blob, `comprobante-${id}.pdf`);
     } catch {
       setReceiptError('No se pudo descargar el comprobante.');
     }
