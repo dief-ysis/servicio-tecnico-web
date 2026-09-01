@@ -107,6 +107,20 @@ describe('EquipmentsPage', () => {
     );
   });
 
+  test('elegir un técnico en el filtro consulta getEquipment con su id', async () => {
+    getEquipment.mockResolvedValue([]);
+    renderPage();
+    await waitFor(() => expect(getEquipment).toHaveBeenCalledTimes(1));
+    // El selector se puebla con getUsers, así que hay que esperar a que llegue.
+    await screen.findByRole('option', { name: 'Juan Pérez' });
+
+    await userEvent.selectOptions(screen.getByDisplayValue('Todos los técnicos'), 'Juan Pérez');
+
+    await waitFor(() =>
+      expect(getEquipment).toHaveBeenLastCalledWith({ buscar: '', estado: '', tecnico: '1' })
+    );
+  });
+
   test('muestra ErrorBanner cuando getEquipment falla sin crash del componente', async () => {
     getEquipment.mockRejectedValue(new Error('fallo_red'));
 

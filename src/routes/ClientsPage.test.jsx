@@ -65,6 +65,13 @@ describe('ClientsPage', () => {
       () => expect(getClients).toHaveBeenLastCalledWith({ q: 'ana', limit: 20, offset: 0 }),
       { timeout: 1000 }
     );
+
+    // Lo anterior se cumple igual SIN debounce (la última llamada sería 'ana'
+    // de todos modos). Lo que prueba el debounce es que los estados
+    // intermedios del tipeo nunca llegaron a consultarse.
+    const terminosConsultados = getClients.mock.calls.map(([args]) => args.q);
+    expect(terminosConsultados).not.toContain('a');
+    expect(terminosConsultados).not.toContain('an');
   });
 
   test('rol TECNICO no ve el botón "Nuevo cliente" ni "Editar"', async () => {
