@@ -61,7 +61,14 @@ export function EquipmentDetailPage() {
   const [cantidad, setCantidad] = useState('');
   const [revirtiendoId, setRevirtiendoId] = useState(null);
   const [motivoReversion, setMotivoReversion] = useState('');
-  const [validationError, setValidationError] = useState('');
+  // Un error por formulario: esta pantalla tiene 4 (estado, presupuesto,
+  // repuestos, reversión) separados por cientos de píxeles. Con un solo estado
+  // compartido, un error del form de abajo se mostraba arriba de todo, fuera
+  // de la vista del usuario, y quedaba pegado al cambiar de formulario.
+  const [errorEstado, setErrorEstado] = useState('');
+  const [errorPresupuesto, setErrorPresupuesto] = useState('');
+  const [errorRepuesto, setErrorRepuesto] = useState('');
+  const [errorReversion, setErrorReversion] = useState('');
 
   const { data: equipo, isLoading, isError } = useQuery({
     queryKey: ['equipos', id],
@@ -137,10 +144,10 @@ export function EquipmentDetailPage() {
   });
 
   function handleConfirmarEstado() {
-    setValidationError('');
+    setErrorEstado('');
     const motivoRequerido = nuevoEstado === 'NO_REPARABLE' && equipo.estado !== 'ESPERANDO_APROBACION';
     if (motivoRequerido && !motivo.trim()) {
-      setValidationError('Debes indicar un motivo para marcar el equipo como no reparable.');
+      setErrorEstado('Debes indicar un motivo para marcar el equipo como no reparable.');
       return;
     }
     estadoMutation.mutate();
@@ -153,13 +160,13 @@ export function EquipmentDetailPage() {
 
   function handleEnviarPresupuesto(e) {
     e.preventDefault();
-    setValidationError('');
+    setErrorPresupuesto('');
     if (!presupuestoMonto || Number(presupuestoMonto) <= 0) {
-      setValidationError('El monto debe ser mayor a cero.');
+      setErrorPresupuesto('El monto debe ser mayor a cero.');
       return;
     }
     if (!presupuestoDescripcion.trim()) {
-      setValidationError('La descripción es requerida.');
+      setErrorPresupuesto('La descripción es requerida.');
       return;
     }
     presupuestoMutation.mutate();
@@ -167,22 +174,30 @@ export function EquipmentDetailPage() {
 
   function handleRegistrarRepuesto(e) {
     e.preventDefault();
-    setValidationError('');
+    setErrorRepuesto('');
     if (!repuestoId) {
-      setValidationError('Selecciona un repuesto.');
+      setErrorRepuesto('Selecciona un repuesto.');
       return;
     }
     if (!cantidad || !Number.isInteger(Number(cantidad)) || Number(cantidad) <= 0) {
-      setValidationError('La cantidad debe ser un número entero mayor a cero.');
+      setErrorRepuesto('La cantidad debe ser un número entero mayor a cero.');
       return;
     }
     registrarRepuestoMutation.mutate();
   }
 
+  function abrirReversion(movimientoId) {
+    // El motivo y el error son de la fila que se está revirtiendo: si se
+    // arrastran, el texto escrito para un consumo aparece al abrir otro.
+    setRevirtiendoId((actual) => (actual === movimientoId ? null : movimientoId));
+    setMotivoReversion('');
+    setErrorReversion('');
+  }
+
   function handleConfirmarReversion(movimientoId) {
-    setValidationError('');
+    setErrorReversion('');
     if (!motivoReversion.trim()) {
-      setValidationError('Debes indicar un motivo para revertir el consumo.');
+      setErrorReversion('Debes indicar un motivo para revertir el consumo.');
       return;
     }
     reversionMutation.mutate(movimientoId);
@@ -218,8 +233,6 @@ export function EquipmentDetailPage() {
           Ver orden (ingreso {formatFecha(equipo.orden.fechaIngreso)})
         </Link>
       </div>
-
-      <ErrorBanner message={validationError} />
 
       <div className="border border-ink-700 rounded-md p-3 flex flex-col gap-2">
         <p className="text-ink-500 text-xs uppercase font-semibold">Técnico asignado</p>
@@ -273,7 +286,12 @@ export function EquipmentDetailPage() {
               {estadoMutation.isPending ? 'Guardando...' : 'Confirmar'}
             </Button>
             <ErrorBanner
-              message={estadoMutation.isError ? serverMessage(estadoMutation.error, 'No se pudo cambiar el estado.') : ''}
+              message={
+                errorEstado ||
+                (estadoMutation.isError
+                  ? serverMessage(estadoMutation.error, 'No se pudo cambiar el estado.')
+                  : '')
+              }
             />
           </>
         )}
@@ -313,9 +331,10 @@ export function EquipmentDetailPage() {
             </Button>
             <ErrorBanner
               message={
-                presupuestoMutation.isError
+                errorPresupuesto ||
+                (presupuestoMutation.isError
                   ? serverMessage(presupuestoMutation.error, 'No se pudo registrar el presupuesto.')
-                  : ''
+                  : '')
               }
             />
           </form>
@@ -347,9 +366,10 @@ export function EquipmentDetailPage() {
           </Button>
           <ErrorBanner
             message={
-              registrarRepuestoMutation.isError
+              errorRepuesto ||
+              (registrarRepuestoMutation.isError
                 ? serverMessage(registrarRepuestoMutation.error, 'No se pudo registrar el repuesto.')
-                : ''
+                : '')
             }
           />
         </form>
@@ -361,20 +381,30 @@ export function EquipmentDetailPage() {
             {movimientos.map((m) => (
               <li key={m.id} className="border-t border-ink-700 pt-2 flex flex-col gap-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-white">
+                  <span className={m.revertido ? 'text-ink-500 line-through' : 'text-white'}>
                     {m.repuestoNombre} × {m.cantidad}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setRevirtiendoId(revirtiendoId === m.id ? null : m.id)}
-                    className="text-xs text-red-400 hover:text-red-300"
-                  >
-                    Revertir
-                  </button>
+                  {m.revertido ? (
+                    <Badge variant="neutral">Revertido</Badge>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => abrirReversion(m.id)}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      Revertir
+                    </button>
+                  )}
                 </div>
                 <p className="text-ink-500 text-xs">
                   {formatFecha(m.fecha)} · {m.usuarioNombre}
                 </p>
+                {m.revertido && (
+                  <p className="text-ink-500 text-xs">
+                    Revertido el {formatFecha(m.fechaReversion)}
+                    {m.motivoReversion ? ` · ${m.motivoReversion}` : ''}
+                  </p>
+                )}
                 {revirtiendoId === m.id && (
                   <div className="flex flex-col gap-2">
                     <Textarea
@@ -398,7 +428,12 @@ export function EquipmentDetailPage() {
           </ul>
         )}
         <ErrorBanner
-          message={reversionMutation.isError ? serverMessage(reversionMutation.error, 'No se pudo revertir el consumo.') : ''}
+          message={
+            errorReversion ||
+            (reversionMutation.isError
+              ? serverMessage(reversionMutation.error, 'No se pudo revertir el consumo.')
+              : '')
+          }
         />
       </div>
 

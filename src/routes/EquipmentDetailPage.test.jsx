@@ -38,8 +38,20 @@ const USUARIOS = [
 ];
 const REPUESTOS = [{ id: 3, nombre: 'Fusible 5A', stockActual: 10 }];
 const MOVIMIENTOS = [
-  { id: 1, repuestoId: 3, repuestoNombre: 'Fusible 5A', cantidad: 2, fecha: '2026-07-22T10:00:00.000Z', usuarioId: 1, usuarioNombre: 'Juan Pérez' },
+  { id: 1, repuestoId: 3, repuestoNombre: 'Fusible 5A', cantidad: 2, fecha: '2026-07-22T10:00:00.000Z', usuarioId: 1, usuarioNombre: 'Juan Pérez', revertido: false, fechaReversion: null, motivoReversion: null },
 ];
+const MOVIMIENTO_REVERTIDO = {
+  id: 2,
+  repuestoId: 3,
+  repuestoNombre: 'Cable HDMI',
+  cantidad: 1,
+  fecha: '2026-07-21T10:00:00.000Z',
+  usuarioId: 1,
+  usuarioNombre: 'Juan Pérez',
+  revertido: true,
+  fechaReversion: '2026-07-23T10:00:00.000Z',
+  motivoReversion: 'Se devolvió sin usar',
+};
 
 function baseEquipo(overrides = {}) {
   return {
@@ -360,5 +372,69 @@ describe('EquipmentDetailPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Ese consumo ya fue revertido.')).toBeInTheDocument();
     });
+  });
+
+  test('un consumo ya revertido se marca como tal y no ofrece "Revertir"', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+    getPartUsage.mockResolvedValue([...MOVIMIENTOS, MOVIMIENTO_REVERTIDO]);
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    expect(await screen.findByText('Revertido')).toBeInTheDocument();
+    expect(screen.getByText(/se devolvió sin usar/i)).toBeInTheDocument();
+    // El consumo vigente sí conserva su botón; el revertido no aporta uno nuevo.
+    expect(screen.getAllByRole('button', { name: /^revertir$/i })).toHaveLength(1);
+  });
+
+  test('el motivo de reversión no se arrastra al abrir otra fila', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+    getPartUsage.mockResolvedValue([
+      ...MOVIMIENTOS,
+      { ...MOVIMIENTO_REVERTIDO, id: 3, revertido: false, fechaReversion: null, motivoReversion: null },
+    ]);
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    const botones = await screen.findAllByRole('button', { name: /^revertir$/i });
+    await userEvent.click(botones[0]);
+    await userEvent.type(screen.getByLabelText('Motivo de la reversión'), 'Texto de la fila 1');
+
+    // Cerrar esa fila y abrir la otra.
+    await userEvent.click(botones[0]);
+    await userEvent.click(botones[1]);
+
+    expect(screen.getByLabelText('Motivo de la reversión')).toHaveValue('');
+  });
+
+  test('cada formulario tiene su propio error: uno no borra al otro', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    // Error de validación en el formulario de presupuesto.
+    await userEvent.type(screen.getByLabelText('Monto'), '0');
+    await userEvent.click(screen.getByRole('button', { name: /enviar presupuesto/i }));
+    expect(await screen.findByText('El monto debe ser mayor a cero.')).toBeInTheDocument();
+
+    // Error de validación en el de repuestos (sin seleccionar repuesto).
+    await userEvent.click(screen.getByRole('button', { name: /^registrar$/i }));
+    expect(await screen.findByText('Selecciona un repuesto.')).toBeInTheDocument();
+
+    // Con un único estado compartido, el segundo error habría borrado al
+    // primero. Los dos deben seguir visibles, cada uno junto a su formulario.
+    expect(screen.getByText('El monto debe ser mayor a cero.')).toBeInTheDocument();
+  });
+
+  test('un equipo en estado terminal muestra "Sin transiciones disponibles"', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo({ estado: 'ENTREGADO' }));
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    expect(screen.getByText('Sin transiciones disponibles.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Nuevo estado')).not.toBeInTheDocument();
   });
 });
