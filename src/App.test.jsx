@@ -20,6 +20,20 @@ describe('App', () => {
     await waitFor(() => expect(screen.getByText('Servicio Técnico')).toBeInTheDocument());
   });
 
+  test('/seguimiento es pública: se ve sin sesión, sin redirigir a login', async () => {
+    // El cliente no tiene cuenta. Cualquier otra ruta sin sesión termina en
+    // /login; esta no debe.
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { equipos: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.pushState({}, '', '/seguimiento');
+
+    render(<App />);
+
+    expect(await screen.findByText('Estado de tu equipo')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Usuario')).not.toBeInTheDocument();
+    window.history.pushState({}, '', '/');
+  });
+
   test('sesión expirada a mitad de uso redirige a login mostrando el aviso (circuito real, sin mocks de useAuth/ProtectedRoute)', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(
       jsonResponse(200, {

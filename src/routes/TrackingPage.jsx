@@ -28,16 +28,24 @@ export function TrackingPage() {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
 
+  // Sincronizar el input con el :codigo de la URL durante el render, no en un
+  // efecto: es el patrón que recomienda React para ajustar estado cuando
+  // cambia una prop, y evita el render intermedio con el valor viejo.
+  const [codigoPrevio, setCodigoPrevio] = useState(codigoUrl);
+  if (codigoUrl && codigoUrl !== codigoPrevio) {
+    setCodigoPrevio(codigoUrl);
+    setCodigo(codigoUrl);
+  }
+
   // Entrar por /seguimiento/:codigo consulta sin que el cliente tenga que
   // hacer nada: el link del comprobante debe funcionar de una.
   useEffect(() => {
     if (!codigoUrl) return;
     let vigente = true;
-    setCodigo(codigoUrl);
-    setCargando(true);
-    setError('');
 
     (async () => {
+      setCargando(true);
+      setError('');
       try {
         const data = await consultarSeguimiento(codigoUrl);
         if (vigente) setEquipos(data.equipos || []);
