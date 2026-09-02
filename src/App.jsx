@@ -10,6 +10,7 @@ import { ComingSoonPage } from './routes/ComingSoonPage';
 import { ClientsPage } from './routes/ClientsPage';
 import { OrdersPage } from './routes/OrdersPage';
 import { OrderDetailPage } from './routes/OrderDetailPage';
+import { TrackingPage } from './routes/TrackingPage';
 import { EquipmentsPage } from './routes/EquipmentsPage';
 import { EquipmentDetailPage } from './routes/EquipmentDetailPage';
 import { PartsPage } from './routes/PartsPage';
@@ -23,6 +24,10 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            {/* Públicas: el cliente no tiene cuenta (CU-16). Van fuera del
+                bloque protegido y del AppShell, igual que /login. */}
+            <Route path="/seguimiento" element={<TrackingPage />} />
+            <Route path="/seguimiento/:codigo" element={<TrackingPage />} />
             <Route
               path="/cambiar-password"
               element={
