@@ -14,6 +14,7 @@ import { TrackingPage } from './routes/TrackingPage';
 import { EquipmentsPage } from './routes/EquipmentsPage';
 import { EquipmentDetailPage } from './routes/EquipmentDetailPage';
 import { PartsPage } from './routes/PartsPage';
+import { UsersPage } from './routes/UsersPage';
 
 const queryClient = new QueryClient();
 
@@ -104,7 +105,7 @@ function App() {
                 path="/usuarios"
                 element={
                   <ProtectedRoute roles={['ADMIN']}>
-                    <ComingSoonPage title="Usuarios" />
+                    <UsersPage />
                   </ProtectedRoute>
                 }
               />

@@ -46,7 +46,11 @@ describe('OrdersPage + OrderFormModal (integración)', () => {
     useAuth.mockReturnValue({ usuario: { rol: 'RECEPCION' } });
   });
 
-  test('crear una orden para un cliente existente refresca la lista y descarga el comprobante', async () => {
+  // Timeout explícito: es el test más pesado de la suite —monta ClientPicker,
+  // OrderFormModal y ClientFormModal reales, con la búsqueda debounced de 300ms
+  // y varias interacciones de userEvent— y bajo carga en paralelo rozaba los
+  // 5s por defecto (visto: 5127ms). Falla intermitente, no un problema real.
+  test('crear una orden para un cliente existente refresca la lista y descarga el comprobante', { timeout: 20000 }, async () => {
     getOrders.mockResolvedValueOnce({ data: [], total: 0, limit: 20, offset: 0 });
     getOrders.mockResolvedValue({
       data: [
