@@ -6,7 +6,7 @@ const ROL_VARIANT = {
   TECNICO: 'neutral',
 };
 
-const MOTIVO_PROPIA = 'No puedes cambiar el rol ni desactivar tu propia cuenta.';
+const MOTIVO_PROPIA = 'No puedes desactivar tu propia cuenta.';
 
 export function UsersTable({ usuarios, usuarioActualId, onEdit, onToggleActivo }) {
   if (usuarios.length === 0) {
@@ -27,7 +27,10 @@ export function UsersTable({ usuarios, usuarioActualId, onEdit, onToggleActivo }
       <tbody>
         {usuarios.map((usuario) => {
           // El backend rechaza con 422 que alguien cambie su propio rol o se
-          // desactive (se dejaría fuera del sistema). La UI no lo ofrece.
+          // desactive (se dejaría fuera del sistema), pero SÍ permite cambiarse
+          // el propio nombre: no bloquea a nadie. Por eso solo se deshabilita
+          // activar/desactivar; "Editar" queda disponible y es el formulario el
+          // que bloquea el rol en la cuenta propia.
           const esPropia = Number(usuario.id) === Number(usuarioActualId);
           const titulo = esPropia ? MOTIVO_PROPIA : undefined;
 
@@ -48,9 +51,7 @@ export function UsersTable({ usuarios, usuarioActualId, onEdit, onToggleActivo }
                   <button
                     type="button"
                     onClick={() => onEdit(usuario)}
-                    disabled={esPropia}
-                    title={titulo}
-                    className="text-gold text-xs font-semibold hover:underline disabled:opacity-30 disabled:no-underline disabled:cursor-not-allowed"
+                    className="text-gold text-xs font-semibold hover:underline"
                   >
                     Editar
                   </button>

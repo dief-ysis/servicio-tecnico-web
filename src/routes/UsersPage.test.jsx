@@ -9,8 +9,8 @@ import { useAuth } from '../contexts/AuthContext';
 vi.mock('../api/users', () => ({ getUsers: vi.fn(), updateUser: vi.fn(), createUser: vi.fn() }));
 vi.mock('../contexts/AuthContext', () => ({ useAuth: vi.fn() }));
 vi.mock('../components/users/UserFormModal', () => ({
-  UserFormModal: ({ usuario, onCreado }) => (
-    <div data-testid="user-form-modal">
+  UserFormModal: ({ usuario, esPropio, onCreado }) => (
+    <div data-testid="user-form-modal" data-espropio={String(esPropio)}>
       {usuario ? `editar-${usuario.id}` : 'nuevo'}
       <button onClick={() => onCreado({ usuario: { id: 9, nombre: 'Ana' }, contrasenaTemp: 'a1b2c3d4' })}>
         simular-alta
@@ -73,6 +73,30 @@ describe('UsersPage', () => {
     await userEvent.click([...fila.querySelectorAll('button')].find((b) => /desactivar/i.test(b.textContent)));
 
     await waitFor(() => expect(updateUser).toHaveBeenCalledWith(2, { activo: false }));
+  });
+
+  // El formulario bloquea el rol solo si sabe que la fila es la del usuario
+  // logueado. Ese cálculo vive acá, así que acá se prueba: un desajuste de
+  // tipos entre el id del listado y el de la sesión lo dejaría siempre en
+  // false y el admin comería un 422 al guardar su propio nombre.
+  test('editar la fila propia marca el modal como propio; la de otro, no', async () => {
+    getUsers.mockResolvedValue(USUARIOS);
+    renderPage();
+
+    const filaPropia = (await screen.findByText('Admin Uno')).closest('tr');
+    await userEvent.click([...filaPropia.querySelectorAll('button')].find((b) => /editar/i.test(b.textContent)));
+    expect(screen.getByTestId('user-form-modal')).toHaveAttribute('data-espropio', 'true');
+    expect(screen.getByTestId('user-form-modal')).toHaveTextContent('editar-1');
+  });
+
+  test('editar la fila de otro usuario no marca el modal como propio', async () => {
+    getUsers.mockResolvedValue(USUARIOS);
+    renderPage();
+
+    const otraFila = (await screen.findByText('Tec Dos')).closest('tr');
+    await userEvent.click([...otraFila.querySelectorAll('button')].find((b) => /editar/i.test(b.textContent)));
+    expect(screen.getByTestId('user-form-modal')).toHaveAttribute('data-espropio', 'false');
+    expect(screen.getByTestId('user-form-modal')).toHaveTextContent('editar-2');
   });
 
   test('muestra ErrorBanner si getUsers falla', async () => {

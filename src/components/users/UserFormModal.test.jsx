@@ -85,4 +85,23 @@ describe('UserFormModal', () => {
       nombre: 'Tec Editado', rol: 'RECEPCION',
     }));
   });
+
+  // El PATCH devuelve 422 no_puede_modificarse_a_si_mismo en cuanto el cuerpo
+  // trae `rol`, aunque sea el mismo valor. Si el formulario lo mandara igual,
+  // un admin no podría corregirse ni una falta de ortografía en su nombre.
+  test('edición de la cuenta propia: el rol queda bloqueado y solo se manda el nombre', async () => {
+    const usuario = { id: 7, nombre: 'Admin Uno', identificador_acceso: 'admin@taller.cl', rol: 'ADMIN', activo: true };
+    updateUser.mockClear();
+    updateUser.mockResolvedValue({ ...usuario, nombre: 'Admin Corregido' });
+    renderModal({ usuario, esPropio: true });
+
+    expect(screen.getByLabelText('Rol')).toBeDisabled();
+    expect(screen.getByText(/no puedes cambiar tu propio rol/i)).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByLabelText('Nombre'));
+    await userEvent.type(screen.getByLabelText('Nombre'), 'Admin Corregido');
+    await userEvent.click(screen.getByRole('button', { name: /guardar/i }));
+
+    await waitFor(() => expect(updateUser).toHaveBeenCalledWith(7, { nombre: 'Admin Corregido' }));
+  });
 });

@@ -45,17 +45,23 @@ describe('UsersTable', () => {
 
   // La guarda: el backend rechaza con 422 que un admin se desactive o cambie
   // su propio rol, y la UI no debe siquiera ofrecerlo.
-  test('en la fila propia, editar y desactivar están deshabilitados', () => {
-    renderTable();
+  // El backend permite a propósito que un admin se cambie el propio nombre
+  // (no lo deja fuera del sistema) y solo rechaza rol/activo. La tabla tiene
+  // que reflejar esa línea: desactivar bloqueado, editar disponible.
+  test('en la fila propia se bloquea desactivar, pero editar sigue disponible', async () => {
+    const onEdit = vi.fn();
+    renderTable({ onEdit });
     const filaPropia = screen.getByText('Admin Uno').closest('tr');
-
     const botones = [...filaPropia.querySelectorAll('button')];
-    expect(botones.length).toBeGreaterThan(0);
-    for (const b of botones) expect(b).toBeDisabled();
-    expect(filaPropia.querySelector('button[title]')).toHaveAttribute(
-      'title',
-      expect.stringMatching(/propia cuenta/i)
-    );
+
+    const desactivar = botones.find((b) => /desactivar/i.test(b.textContent));
+    expect(desactivar).toBeDisabled();
+    expect(desactivar).toHaveAttribute('title', expect.stringMatching(/propia cuenta/i));
+
+    const editar = botones.find((b) => /editar/i.test(b.textContent));
+    expect(editar).toBeEnabled();
+    await userEvent.click(editar);
+    expect(onEdit).toHaveBeenCalledWith(USUARIOS[0]);
   });
 
   test('en la fila de otro usuario, las acciones sí funcionan', async () => {
