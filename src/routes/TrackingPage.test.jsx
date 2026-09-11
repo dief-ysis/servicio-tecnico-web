@@ -89,4 +89,41 @@ describe('TrackingPage', () => {
     expect(screen.queryByText(MENSAJE_NEUTRO)).not.toBeInTheDocument();
     expect(screen.queryByText('OT-7-1')).not.toBeInTheDocument();
   });
+
+  // Los mensajes de error terminan en "intenta de nuevo", y reintentar es
+  // apretar Consultar con el mismo código. Como eso no cambia la URL, si la
+  // consulta colgara solo del efecto de :codigo el botón quedaría muerto
+  // justo en el caso que el mensaje invita a ejercer.
+  test('reintentar con el mismo código vuelve a consultar', async () => {
+    consultarSeguimiento.mockClear();
+    consultarSeguimiento.mockImplementation(() => Promise.reject(new Error('fallo_red')));
+    renderPage('/seguimiento/abc123');
+
+    expect(await screen.findByText(/no pudimos conectar/i)).toBeInTheDocument();
+    expect(consultarSeguimiento).toHaveBeenCalledTimes(1);
+
+    consultarSeguimiento.mockImplementation(() => Promise.resolve({ equipos: EQUIPOS }));
+    await userEvent.click(screen.getByRole('button', { name: /consultar/i }));
+
+    await waitFor(() => expect(consultarSeguimiento).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('OT-7-1')).toBeInTheDocument();
+    expect(screen.queryByText(/no pudimos conectar/i)).not.toBeInTheDocument();
+  });
+
+  // Un cliente que ya consultó y quiere ver si su equipo avanzó aprieta
+  // Consultar otra vez: tiene que traer datos frescos, no la lista vieja.
+  test('reconsultar el mismo código refresca los resultados', async () => {
+    consultarSeguimiento.mockClear();
+    consultarSeguimiento.mockImplementation(() => Promise.resolve({ equipos: EQUIPOS }));
+    renderPage('/seguimiento/abc123');
+
+    expect(await screen.findByText('En diagnóstico')).toBeInTheDocument();
+
+    consultarSeguimiento.mockImplementation(() =>
+      Promise.resolve({ equipos: [{ ...EQUIPOS[0], estado: 'LISTO_PARA_RETIRO' }] })
+    );
+    await userEvent.click(screen.getByRole('button', { name: /consultar/i }));
+
+    expect(await screen.findByText('Listo para retiro')).toBeInTheDocument();
+  });
 });

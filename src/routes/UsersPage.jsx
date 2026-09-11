@@ -59,6 +59,9 @@ export function UsersPage() {
       {modalUsuario !== undefined && (
         <UserFormModal
           usuario={modalUsuario}
+          esPropio={
+            modalUsuario != null && Number(modalUsuario.id) === Number(usuarioActual?.id)
+          }
           onClose={() => setModalUsuario(undefined)}
           onCreado={(data) => setCreado(data)}
         />

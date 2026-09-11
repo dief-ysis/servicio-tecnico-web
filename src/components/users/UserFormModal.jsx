@@ -18,7 +18,7 @@ const SERVER_ERROR_MESSAGES = {
   sin_permiso: 'No tienes permiso para gestionar usuarios.',
 };
 
-export function UserFormModal({ usuario, onClose, onCreado }) {
+export function UserFormModal({ usuario, esPropio = false, onClose, onCreado }) {
   const isEdit = Boolean(usuario);
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
@@ -28,11 +28,17 @@ export function UserFormModal({ usuario, onClose, onCreado }) {
   });
   const [validationError, setValidationError] = useState('');
 
+  // En la cuenta propia el rol queda fuera del PATCH: el backend responde 422
+  // no_puede_modificarse_a_si_mismo en cuanto el cuerpo trae `rol`, aunque
+  // venga con el mismo valor que ya tenía. Mandar solo el nombre es lo que
+  // permite que un admin se corrija su propio nombre, que sí está permitido.
+  const bloqueaRol = isEdit && esPropio;
+
   const mutation = useMutation({
     mutationFn: () =>
       isEdit
         // El identificador no se manda: el backend no lo acepta en el PATCH.
-        ? updateUser(usuario.id, { nombre: form.nombre, rol: form.rol })
+        ? updateUser(usuario.id, bloqueaRol ? { nombre: form.nombre } : { nombre: form.nombre, rol: form.rol })
         : createUser({ nombre: form.nombre, identificador: form.identificador, rol: form.rol }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
@@ -91,11 +97,20 @@ export function UserFormModal({ usuario, onClose, onCreado }) {
         {isEdit && (
           <p className="text-ink-500 text-xs -mt-2">El identificador no se puede cambiar.</p>
         )}
-        <Select id="rol" label="Rol" value={form.rol} onChange={(e) => updateField('rol', e.target.value)}>
+        <Select
+          id="rol"
+          label="Rol"
+          value={form.rol}
+          disabled={bloqueaRol}
+          onChange={(e) => updateField('rol', e.target.value)}
+        >
           {ROLES.map((rol) => (
             <option key={rol} value={rol}>{rol}</option>
           ))}
         </Select>
+        {bloqueaRol && (
+          <p className="text-ink-500 text-xs -mt-2">No puedes cambiar tu propio rol.</p>
+        )}
 
         <ErrorBanner message={validationError || serverError} />
 
