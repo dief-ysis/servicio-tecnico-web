@@ -6,7 +6,6 @@ import { AppShell } from './components/layout/AppShell';
 import { LoginPage } from './routes/LoginPage';
 import { ChangePasswordPage } from './routes/ChangePasswordPage';
 import { HomePage } from './routes/HomePage';
-import { ComingSoonPage } from './routes/ComingSoonPage';
 import { ClientsPage } from './routes/ClientsPage';
 import { OrdersPage } from './routes/OrdersPage';
 import { OrderDetailPage } from './routes/OrderDetailPage';
@@ -15,6 +14,7 @@ import { EquipmentsPage } from './routes/EquipmentsPage';
 import { EquipmentDetailPage } from './routes/EquipmentDetailPage';
 import { PartsPage } from './routes/PartsPage';
 import { UsersPage } from './routes/UsersPage';
+import { ReportsPage } from './routes/ReportsPage';
 
 const queryClient = new QueryClient();
 
@@ -97,7 +97,7 @@ function App() {
                 path="/reportes"
                 element={
                   <ProtectedRoute roles={['ADMIN']}>
-                    <ComingSoonPage title="Reportes" />
+                    <ReportsPage />
                   </ProtectedRoute>
                 }
               />
