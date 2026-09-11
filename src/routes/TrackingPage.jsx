@@ -37,6 +37,14 @@ export function TrackingPage() {
     setCodigo(codigoUrl);
   }
 
+  // Nonce de reintento: apretar "Consultar" con el mismo código que ya está en
+  // la URL no cambia la ruta, así que el efecto de abajo no se volvería a
+  // disparar y el botón quedaría muerto — justo en el caso que los mensajes de
+  // error invitan a ejercer ("intenta de nuevo"), y también cuando el cliente
+  // vuelve a consultar para ver si su equipo avanzó. Subir este contador es lo
+  // que hace que el efecto se re-ejecute sin navegar a ninguna parte.
+  const [intento, setIntento] = useState(0);
+
   // Entrar por /seguimiento/:codigo consulta sin que el cliente tenga que
   // hacer nada: el link del comprobante debe funcionar de una.
   useEffect(() => {
@@ -59,13 +67,17 @@ export function TrackingPage() {
     })();
 
     return () => { vigente = false; };
-  }, [codigoUrl]);
+  }, [codigoUrl, intento]);
 
   function handleSubmit(e) {
     e.preventDefault();
     const limpio = codigo.trim();
     if (!limpio) return;
-    // Navegar en vez de consultar acá deja la URL compartible y hace que el
+    if (limpio === codigoUrl) {
+      setIntento((n) => n + 1);
+      return;
+    }
+    // Navegar en el resto de los casos deja la URL compartible y hace que el
     // efecto de arriba sea el único lugar que consulta.
     navigate(`/seguimiento/${encodeURIComponent(limpio)}`);
   }
