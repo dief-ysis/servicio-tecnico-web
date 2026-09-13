@@ -36,10 +36,10 @@ export async function assignTechnician(id, { tecnicoId }) {
   return parseOrThrow(res);
 }
 
-export async function submitBudget(id, { monto, descripcion }) {
+export async function submitBudget(id, { monto, descripcion, bloqueante }) {
   const res = await apiFetch(`/equipos/${id}/presupuesto`, {
     method: 'PATCH',
-    body: JSON.stringify({ monto, descripcion }),
+    body: JSON.stringify({ monto, descripcion, bloqueante }),
   });
   return parseOrThrow(res);
 }
