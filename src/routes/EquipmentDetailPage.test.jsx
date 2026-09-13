@@ -72,6 +72,8 @@ function baseEquipo(overrides = {}) {
     orden: { fechaIngreso: '2026-07-20T15:00:00.000Z', recepcionistaNombre: 'Carla Ríos' },
     cliente: { id: 1, nombre: 'Ana Soto', empresa: null, telefono: '+56911111111' },
     historial: [],
+    presupuestos: [],
+    requierePresupuesto: false,
     ...overrides,
   };
 }
@@ -210,13 +212,91 @@ describe('EquipmentDetailPage', () => {
     });
   });
 
-  test('el formulario de presupuesto solo se muestra en EN_DIAGNOSTICO', async () => {
+  test('el formulario de presupuesto no se muestra en los estados que no lo aceptan', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo({ estado: 'LISTO_PARA_RETIRO' }));
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    expect(screen.queryByLabelText('Monto')).not.toBeInTheDocument();
+  });
+
+  // El re-presupuesto: se abrió el equipo en la segunda pasada y apareció que
+  // el repuesto cuesta más de lo aprobado.
+  test('en EN_REPARACION el formulario ofrece presupuestar de nuevo', async () => {
     getEquipmentById.mockResolvedValue(baseEquipo({ estado: 'EN_REPARACION' }));
 
     renderPage();
     await screen.findByText('EQ-0005');
 
-    expect(screen.queryByRole('button', { name: /enviar presupuesto/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /presupuestar de nuevo/i })).toBeInTheDocument();
+  });
+
+  test('en ESPERANDO_APROBACION el formulario ofrece corregir, con la casilla bloqueada', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo({ estado: 'ESPERANDO_APROBACION' }));
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    expect(screen.getByRole('button', { name: /corregir presupuesto/i })).toBeInTheDocument();
+    const casilla = screen.getByLabelText('No avanzar sin aprobación del cliente');
+    expect(casilla).toBeChecked();
+    expect(casilla).toBeDisabled();
+    expect(screen.getByText('El equipo ya está esperando respuesta del cliente.')).toBeInTheDocument();
+  });
+
+  // Lo que marcó Recepción es un piso: el técnico no puede desmarcarlo.
+  test('si Recepción marcó el equipo, la casilla viene marcada y bloqueada', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo({ requierePresupuesto: true }));
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    const casilla = screen.getByLabelText('No avanzar sin aprobación del cliente');
+    expect(casilla).toBeChecked();
+    expect(casilla).toBeDisabled();
+    expect(screen.getByText('Recepción lo marcó al ingresar el equipo.')).toBeInTheDocument();
+  });
+
+  test('marcar la casilla manda bloqueante: true', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo());
+    submitBudget.mockResolvedValue({ id: 5, estado: 'ESPERANDO_APROBACION' });
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    await userEvent.type(screen.getByLabelText('Monto'), '15000');
+    await userEvent.type(screen.getByLabelText('Descripción'), 'Trabajo caro');
+    await userEvent.click(screen.getByLabelText('No avanzar sin aprobación del cliente'));
+    await userEvent.click(screen.getByRole('button', { name: /enviar presupuesto/i }));
+
+    await waitFor(() =>
+      expect(submitBudget).toHaveBeenCalledWith('5', {
+        monto: 15000, descripcion: 'Trabajo caro', bloqueante: true,
+      })
+    );
+  });
+
+  test('muestra el historial de presupuestos anteriores con su estado', async () => {
+    getEquipmentById.mockResolvedValue(baseEquipo({
+      estado: 'ESPERANDO_APROBACION',
+      presupuestoMonto: 99999,
+      presupuestoDescripcion: 'Monto corregido',
+      presupuestos: [
+        { id: 2, monto: '99999', descripcion: 'Monto corregido', bloqueante: true, estado: 'PENDIENTE', fecha: '2026-09-10T12:00:00.000Z', fechaRespuesta: null, usuarioNombre: 'Juan' },
+        { id: 1, monto: '999999', descripcion: 'Monto mal tecleado', bloqueante: true, estado: 'REEMPLAZADO', fecha: '2026-09-09T12:00:00.000Z', fechaRespuesta: null, usuarioNombre: 'Juan' },
+      ],
+    }));
+
+    renderPage();
+    await screen.findByText('EQ-0005');
+
+    expect(screen.getByText('Presupuestos anteriores')).toBeInTheDocument();
+    expect(screen.getByText('Corregido')).toBeInTheDocument();
+    expect(screen.getByText(/Monto mal tecleado/)).toBeInTheDocument();
+    // El vigente se muestra con su estado real, no con "pendiente de aprobación"
+    // deducido de un booleano.
+    expect(screen.getByText('Esperando respuesta del cliente')).toBeInTheDocument();
   });
 
   test('enviar presupuesto válido llama a submitBudget', async () => {
@@ -231,7 +311,9 @@ describe('EquipmentDetailPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /enviar presupuesto/i }));
 
     await waitFor(() =>
-      expect(submitBudget).toHaveBeenCalledWith('5', { monto: 15000, descripcion: 'Cambio de fuente' })
+      expect(submitBudget).toHaveBeenCalledWith('5', {
+        monto: 15000, descripcion: 'Cambio de fuente', bloqueante: false,
+      })
     );
   });
 

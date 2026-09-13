@@ -17,6 +17,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
+import { Checkbox } from '../components/ui/Checkbox';
 import { ErrorBanner } from '../components/ui/ErrorBanner';
 import { ESTADO_LABELS, ESTADO_BADGE_VARIANT, getNextEstados } from '../lib/equipmentStates';
 
@@ -28,6 +29,7 @@ const SERVER_ERROR_MESSAGES = {
   usuario_no_es_tecnico: 'El usuario seleccionado no es un técnico.',
   monto_requerido: 'El monto es requerido.',
   monto_invalido: 'El monto debe ser un número mayor a cero.',
+  bloqueante_invalido: 'La marca de aprobación previa no es válida.',
   descripcion_requerida: 'La descripción es requerida.',
   equipo_no_encontrado: 'El equipo ya no existe.',
   repuesto_no_encontrado: 'El repuesto seleccionado ya no existe.',
@@ -45,6 +47,33 @@ function serverMessage(error, fallback) {
   return SERVER_ERROR_MESSAGES[error?.message] || fallback;
 }
 
+// Los cinco estados de una fila de presupuesto, en palabras del taller.
+// REEMPLAZADO se lee como "corregido": es lo que pasó desde el mostrador.
+const PRESUPUESTO_LABELS = {
+  PENDIENTE: 'Esperando respuesta del cliente',
+  APROBADO: 'Aprobado',
+  RECHAZADO: 'Rechazado',
+  REEMPLAZADO: 'Corregido',
+  INFORMATIVO: 'Informativo',
+};
+
+const PRESUPUESTO_BADGE_VARIANT = {
+  PENDIENTE: 'alerta',
+  APROBADO: 'listo',
+  RECHAZADO: 'alerta',
+  REEMPLAZADO: 'neutral',
+  INFORMATIVO: 'neutral',
+};
+
+const ESTADOS_PRESUPUESTABLES = ['EN_DIAGNOSTICO', 'EN_REPARACION', 'ESPERANDO_APROBACION'];
+
+// El botón dice lo que va a pasar, que no es lo mismo en los tres estados.
+const BOTON_PRESUPUESTO = {
+  EN_DIAGNOSTICO: 'Enviar presupuesto',
+  EN_REPARACION: 'Presupuestar de nuevo',
+  ESPERANDO_APROBACION: 'Corregir presupuesto',
+};
+
 function formatFecha(fechaIso) {
   return fechaIso ? new Date(fechaIso).toLocaleDateString('es-CL') : '—';
 }
@@ -57,6 +86,7 @@ export function EquipmentDetailPage() {
   const [motivo, setMotivo] = useState('');
   const [presupuestoMonto, setPresupuestoMonto] = useState('');
   const [presupuestoDescripcion, setPresupuestoDescripcion] = useState('');
+  const [presupuestoBloqueante, setPresupuestoBloqueante] = useState(false);
   const [repuestoId, setRepuestoId] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [revirtiendoId, setRevirtiendoId] = useState(null);
@@ -139,10 +169,15 @@ export function EquipmentDetailPage() {
 
   const presupuestoMutation = useMutation({
     mutationFn: () =>
-      submitBudget(id, { monto: Number(presupuestoMonto), descripcion: presupuestoDescripcion }),
+      submitBudget(id, {
+        monto: Number(presupuestoMonto),
+        descripcion: presupuestoDescripcion,
+        bloqueante: presupuestoBloqueante,
+      }),
     onSuccess: () => {
       setPresupuestoMonto('');
       setPresupuestoDescripcion('');
+      setPresupuestoBloqueante(false);
       invalidateEquipo();
     },
   });
@@ -211,6 +246,14 @@ export function EquipmentDetailPage() {
   if (isError || !equipo) return <ErrorBanner message="No se pudo cargar el equipo." />;
 
   const nextEstados = getNextEstados(equipo.estado);
+  // El vigente es el primero: el backend devuelve el historial del más nuevo al
+  // más viejo.
+  const presupuestoVigente = equipo.presupuestos?.[0];
+  // Dos razones para que la casilla no se pueda desmarcar: Recepción ya lo pidió
+  // al ingresar el equipo (piso que el técnico no puede bajar), o el equipo ya
+  // está esperando respuesta y corregir el monto no lo saca de ahí.
+  const bloqueanteForzado =
+    equipo.requierePresupuesto || equipo.estado === 'ESPERANDO_APROBACION';
 
   return (
     <div className="flex flex-col gap-4">
@@ -304,17 +347,47 @@ export function EquipmentDetailPage() {
       <div className="border border-ink-700 rounded-md p-3 flex flex-col gap-2">
         <p className="text-ink-500 text-xs uppercase font-semibold">Presupuesto</p>
         {equipo.presupuestoMonto != null ? (
-          <div className="text-sm">
+          <div className="text-sm flex flex-col gap-1">
             <p className="text-white">Monto: ${equipo.presupuestoMonto}</p>
             <p className="text-ink-500">{equipo.presupuestoDescripcion}</p>
-            <p className="text-ink-500">
-              {equipo.presupuestoAprobado ? 'Aprobado' : 'Pendiente de aprobación'}
-            </p>
+            {presupuestoVigente ? (
+              <div className="flex items-center gap-2">
+                <Badge variant={PRESUPUESTO_BADGE_VARIANT[presupuestoVigente.estado] || 'neutral'}>
+                  {PRESUPUESTO_LABELS[presupuestoVigente.estado] || presupuestoVigente.estado}
+                </Badge>
+                {presupuestoVigente.usuarioNombre && (
+                  <span className="text-ink-500">
+                    {formatFecha(presupuestoVigente.fecha)} · {presupuestoVigente.usuarioNombre}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <p className="text-ink-500">
+                {equipo.presupuestoAprobado ? 'Aprobado' : 'Pendiente de aprobación'}
+              </p>
+            )}
           </div>
         ) : (
           <p className="text-ink-500 text-sm">Sin presupuesto registrado.</p>
         )}
-        {equipo.estado === 'EN_DIAGNOSTICO' && (
+        {equipo.presupuestos?.length > 1 && (
+          <div className="flex flex-col gap-1 border-t border-ink-700 pt-2">
+            <p className="text-ink-500 text-xs uppercase font-semibold">Presupuestos anteriores</p>
+            {equipo.presupuestos.slice(1).map((p) => (
+              <div key={p.id} className="text-sm flex flex-wrap items-center gap-2">
+                <span className="text-white tabular-nums">${p.monto}</span>
+                <Badge variant={PRESUPUESTO_BADGE_VARIANT[p.estado] || 'neutral'}>
+                  {PRESUPUESTO_LABELS[p.estado] || p.estado}
+                </Badge>
+                <span className="text-ink-500">
+                  {p.descripcion} · {formatFecha(p.fecha)}
+                  {p.usuarioNombre ? ` · ${p.usuarioNombre}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {ESTADOS_PRESUPUESTABLES.includes(equipo.estado) && (
           <form onSubmit={handleEnviarPresupuesto} noValidate className="flex flex-col gap-2">
             <Input
               id="presupuesto-monto"
@@ -330,8 +403,27 @@ export function EquipmentDetailPage() {
               value={presupuestoDescripcion}
               onChange={(e) => setPresupuestoDescripcion(e.target.value)}
             />
+            {/* La casilla sale marcada y bloqueada cuando la decisión ya está
+                tomada: porque Recepción lo marcó al ingresar el equipo (es un
+                piso que el técnico no puede bajar), o porque el equipo ya está
+                esperando respuesta y corregir el monto no lo destraba. Sin la
+                razón a la vista, una casilla deshabilitada se lee como un bug. */}
+            <Checkbox
+              id="presupuesto-bloqueante"
+              label="No avanzar sin aprobación del cliente"
+              checked={bloqueanteForzado || presupuestoBloqueante}
+              disabled={bloqueanteForzado}
+              onChange={(e) => setPresupuestoBloqueante(e.target.checked)}
+            />
+            {bloqueanteForzado && (
+              <p className="text-ink-500 text-xs">
+                {equipo.estado === 'ESPERANDO_APROBACION'
+                  ? 'El equipo ya está esperando respuesta del cliente.'
+                  : 'Recepción lo marcó al ingresar el equipo.'}
+              </p>
+            )}
             <Button type="submit" variant="secondary" disabled={presupuestoMutation.isPending}>
-              {presupuestoMutation.isPending ? 'Guardando...' : 'Enviar presupuesto'}
+              {presupuestoMutation.isPending ? 'Guardando...' : BOTON_PRESUPUESTO[equipo.estado]}
             </Button>
             <ErrorBanner
               message={
