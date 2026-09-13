@@ -15,8 +15,17 @@ describe('equipmentStates', () => {
     expect(getNextEstados('ESPERANDO_APROBACION')).toEqual(['EN_REPARACION', 'NO_REPARABLE']);
   });
 
+  // Las dos mitades del nombre. La segunda es la que atrapa una resincronización
+  // futura que borre por accidente una entrada del mapa: el estado se volvería
+  // terminal en silencio (la UI diría "Sin transiciones disponibles" y el equipo
+  // no se podría mover nunca más) con la suite igual de verde.
   test('ENTREGADO es el único estado terminal', () => {
     expect(getNextEstados('ENTREGADO')).toEqual([]);
+
+    const sinSalida = ESTADOS
+      .filter((estado) => estado !== 'ENTREGADO')
+      .filter((estado) => getNextEstados(estado).length === 0);
+    expect(sinSalida).toEqual([]);
   });
 
   // El equipo no reparable no se queda en el taller: se le devuelve al cliente.

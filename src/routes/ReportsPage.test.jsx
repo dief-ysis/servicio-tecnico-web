@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReportsPage } from './ReportsPage';
@@ -14,7 +14,10 @@ const PENDIENTES = {
   porEstado: [{ estado: 'EN_DIAGNOSTICO', total: 3 }],
   equipos: [{ id: 1, idInterno: 'OT-1-1', estado: 'EN_DIAGNOSTICO', clienteNombre: 'Ana', tecnicoNombre: 'Juan' }],
 };
-const SIN_RETIRO = [{ idInterno: 'OT-2-1', cliente: 'Beto', fechaListoRetiro: '2026-01-01T10:00:00.000Z', diasTranscurridos: 45 }];
+const SIN_RETIRO = [
+  { idInterno: 'OT-2-1', cliente: 'Beto', estado: 'LISTO_PARA_RETIRO', fechaListoRetiro: '2026-01-01T10:00:00.000Z', diasTranscurridos: 45 },
+  { idInterno: 'OT-2-2', cliente: 'Carla', estado: 'NO_REPARABLE', fechaListoRetiro: '2025-12-01T10:00:00.000Z', diasTranscurridos: 76 },
+];
 
 function renderPage() {
   return render(
@@ -42,6 +45,22 @@ describe('ReportsPage', () => {
     expect(screen.getByTestId('barra-relleno')).toBeInTheDocument();
     expect(await screen.findByText('OT-2-1')).toBeInTheDocument();
     expect(screen.getByText('45')).toBeInTheDocument();
+  });
+
+  // Desde que el reporte incluye los irreparables, la tabla mezcla dos
+  // situaciones distintas para el cliente que va a recibir la llamada.
+  test('la tabla de sin retiro distingue el equipo listo del irreparable', async () => {
+    mockOk();
+    renderPage();
+
+    // Por fila y no por página: "Listo para retiro" también es el encabezado de
+    // una columna en la tabla de tiempo de taller.
+    const filaListo = (await screen.findByText('OT-2-1')).closest('tr');
+    const filaIrreparable = screen.getByText('OT-2-2').closest('tr');
+
+    expect(within(filaListo).getByText('Listo para retiro')).toBeInTheDocument();
+    expect(within(filaIrreparable).getByText('No reparable')).toBeInTheDocument();
+    expect(within(filaIrreparable).getByText('76')).toBeInTheDocument();
   });
 
   test('filtrar por rango vuelve a consultar tiempo-taller con las fechas', async () => {
