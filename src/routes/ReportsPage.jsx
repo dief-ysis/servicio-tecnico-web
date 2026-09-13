@@ -138,6 +138,9 @@ export function ReportsPage() {
       {/* --- Sin retiro (RN-09) --- */}
       <section className="flex flex-col gap-3">
         <h2 className="text-ink-500 text-xs uppercase font-semibold">Sin retirar hace más de 30 días</h2>
+        {/* El reporte trae dos estados: el equipo listo que nadie pasó a buscar
+            y el irreparable que hay que devolver. Quien llama al cliente
+            necesita saber cuál de los dos es antes de marcar. */}
         {sinRetiro.isError && <ErrorBanner message="No se pudo cargar el reporte de equipos sin retiro." />}
         {sinRetiro.data && (
           sinRetiro.data.length === 0 ? (
@@ -148,6 +151,7 @@ export function ReportsPage() {
                 <tr className="text-ink-500 text-xs uppercase">
                   <th className="py-2 font-semibold">Equipo</th>
                   <th className="font-semibold">Cliente</th>
+                  <th className="font-semibold">Estado</th>
                   <th className="font-semibold">Listo desde</th>
                   <th className="font-semibold">Días</th>
                 </tr>
@@ -157,6 +161,11 @@ export function ReportsPage() {
                   <tr key={e.idInterno} className="border-t border-ink-700">
                     <td className="py-2 text-white">{e.idInterno}</td>
                     <td className="text-ink-500">{e.cliente}</td>
+                    <td>
+                      <Badge variant={ESTADO_BADGE_VARIANT[e.estado] || 'neutral'}>
+                        {ESTADO_LABELS[e.estado] || e.estado}
+                      </Badge>
+                    </td>
                     <td className="text-ink-500">{formatFecha(e.fechaListoRetiro)}</td>
                     <td className="text-white tabular-nums">{e.diasTranscurridos}</td>
                   </tr>

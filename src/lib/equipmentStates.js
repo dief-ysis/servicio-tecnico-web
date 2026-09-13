@@ -1,12 +1,18 @@
-// Espejo manual de TRANSITIONS en servicio-tecnico-api/src/equipment/service.js:5-11.
+// Espejo manual de TRANSITIONS en servicio-tecnico-api/src/equipment/service.js.
 // Si el backend cambia ese mapa, actualizar acá también.
 export const TRANSITIONS = {
   RECIBIDO: ['EN_DIAGNOSTICO'],
   EN_DIAGNOSTICO: ['EN_REPARACION', 'NO_REPARABLE'],
   EN_REPARACION: ['EN_PRUEBAS', 'NO_REPARABLE'],
-  EN_PRUEBAS: ['LISTO_PARA_RETIRO'],
+  // Si el equipo no pasa la prueba, vuelve al banco: es el caso normal de que
+  // la prueba sirva para algo.
+  EN_PRUEBAS: ['LISTO_PARA_RETIRO', 'EN_REPARACION'],
   ESPERANDO_APROBACION: ['EN_REPARACION', 'NO_REPARABLE'],
   LISTO_PARA_RETIRO: ['ENTREGADO'],
+  // Un equipo no reparable (o con el presupuesto rechazado) igual se le
+  // devuelve al cliente. Sin esta salida quedaba para siempre entre los
+  // pendientes y visible en la consulta pública del cliente.
+  NO_REPARABLE: ['ENTREGADO'],
 };
 
 export const ESTADO_LABELS = {
