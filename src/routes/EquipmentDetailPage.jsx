@@ -167,12 +167,21 @@ export function EquipmentDetailPage() {
     },
   });
 
+  // Dos razones para que la casilla no se pueda desmarcar: Recepción ya lo pidió
+  // al ingresar el equipo (piso que el técnico no puede bajar), o el equipo ya
+  // está esperando respuesta y corregir el monto no lo saca de ahí.
+  const bloqueanteForzado =
+    !!equipo && (equipo.requierePresupuesto || equipo.estado === 'ESPERANDO_APROBACION');
+
   const presupuestoMutation = useMutation({
     mutationFn: () =>
       submitBudget(id, {
         monto: Number(presupuestoMonto),
         descripcion: presupuestoDescripcion,
-        bloqueante: presupuestoBloqueante,
+        // Lo que la casilla muestra es lo que se manda. El backend aplica el
+        // piso igual, pero mandar false con la casilla marcada deja al front
+        // diciendo una cosa y pidiendo otra.
+        bloqueante: bloqueanteForzado || presupuestoBloqueante,
       }),
     onSuccess: () => {
       setPresupuestoMonto('');
@@ -249,11 +258,6 @@ export function EquipmentDetailPage() {
   // El vigente es el primero: el backend devuelve el historial del más nuevo al
   // más viejo.
   const presupuestoVigente = equipo.presupuestos?.[0];
-  // Dos razones para que la casilla no se pueda desmarcar: Recepción ya lo pidió
-  // al ingresar el equipo (piso que el técnico no puede bajar), o el equipo ya
-  // está esperando respuesta y corregir el monto no lo saca de ahí.
-  const bloqueanteForzado =
-    equipo.requierePresupuesto || equipo.estado === 'ESPERANDO_APROBACION';
 
   return (
     <div className="flex flex-col gap-4">

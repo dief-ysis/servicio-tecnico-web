@@ -256,6 +256,19 @@ describe('EquipmentDetailPage', () => {
     expect(casilla).toBeChecked();
     expect(casilla).toBeDisabled();
     expect(screen.getByText('Recepción lo marcó al ingresar el equipo.')).toBeInTheDocument();
+
+    // Y se manda lo que la casilla muestra: el backend aplica el piso igual,
+    // pero pedir false con la casilla marcada sería el front contradiciéndose.
+    submitBudget.mockResolvedValue({ id: 5, estado: 'ESPERANDO_APROBACION' });
+    await userEvent.type(screen.getByLabelText('Monto'), '30000');
+    await userEvent.type(screen.getByLabelText('Descripción'), 'Trabajo mayor');
+    await userEvent.click(screen.getByRole('button', { name: /enviar presupuesto/i }));
+
+    await waitFor(() =>
+      expect(submitBudget).toHaveBeenCalledWith('5', {
+        monto: 30000, descripcion: 'Trabajo mayor', bloqueante: true,
+      })
+    );
   });
 
   test('marcar la casilla manda bloqueante: true', async () => {
